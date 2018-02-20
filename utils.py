@@ -4,11 +4,11 @@ import math
 import random
 
 # TODO: define all of these
-start = ''
-end = ''
+start = '<s>'
+end = '</s>'
 pad = '0'
-max_length = ''
-unknown = ''
+max_length = 10
+unknown = '<UNK>'
 
 
 class Batch:
