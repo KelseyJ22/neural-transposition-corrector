@@ -10,46 +10,73 @@ import tensorflow as tf
 import numpy as np 
 import math
 from tqdm import tqdm
-from basic_model import model # TODO implement
+from basic_model import Model
+
+class Config:
+	def __init__(self):
+		self.hidden_size = 512
+		self.dropout = 0.9
+		self.encoder_len = 10 # maximum length of the sentence
+		self.decoder_len = 12
+		self.vocab_size = 20000 # TODO check
+		self.lr = 0.001
+		self.test = False
+		self.embedding_size = 100
+		self.num_layers = 2
+
 
 class OuterRNN:
 	def __init__(self):
-		self.model = model()
-        self.writer = tf.summary.FileWriter(self._getSummaryName())
+		self.config = Config()
+		self.model = Model(config)
+		self.model_dir = 'Psych209_RNN'
+        self.writer = tf.summary.FileWriter(self.model_dir)
         self.saver = tf.train.Saver(max_to_keep=200)
 		self.global_step = 0
-		self.sess = tf.Session() # TODO: any params?
-		self.num_epochs = 100 # TODO: tune
+		self.sess = tf.Session()
+		self.num_epochs = 100
+		self.save_interval = 1000
+		self.print_interval = 100
 
 
 	def main(self):
 		self.sess.run(tf.global_variables_initializer())
-		self.loadEmbeddings(self.sess)
+		utils.load_embeddings(self.sess)
 		self.writer.add_graph(sess.graph)
-		mergedSummaries = tf.summary.merge_all() # TODO: what does this do?
+		merged_summaries = tf.summary.merge_all()
 
 		print 'Starting training...'
 
 		for epoch in range(self.num_epochs):
 				print '-----Epoch', epoch, '-----'
-				batches = utils.get_batches() # TODO: write this
+				batches = utils.get_batches()
 
 				start_time = datetime.datetime.now()
 				for batch in tqdm(batches):
 					ops, feed = self.model.train_step(batch)
-					_, loss, summary = sess.run(ops + (mergedSummaries,), feed)
+					_, loss, summary = sess.run(ops + (merged_summaries,), feed)
 					self.writer.add_summary(summary, self.global_step)
                     self.global_step += 1
 
                     # training status
-                    if self.global_step % 100 == 0:
+                    if self.global_step % self.print_interval == 0:
                         perplexity = math.exp(float(loss)) if loss < 300 else float('inf')
                         tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.global_step, loss, perplexity))
 
                     # save checkpoint
-                    if self.global_step % 100 == 0:
-                        self._saveSession(sess)
-
+                    if self.global_step % self.save_interval == 0:
+                        self.save_session(sess)
 
                 end_time = datetime.datetime.now()
                 print 'Epoch finish in ', end_time-start_time, 'ms'
+
+     def save_session(self, sess):
+     	print 'Saving session at checkpoint', self.global_step
+     	name = self.model_dir + str(self.global_step)
+     	self.saver.save(sess, name)
+     	print 'Save complete with name', name
+
+
+
+
+
