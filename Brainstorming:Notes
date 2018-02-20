@@ -34,7 +34,14 @@ Dataset: lots of words (Wikipedia) with tuned modifications manufactured via ver
 - find corpus with relatively small vocab and focus on words of moderate length (under four characters = not interesting, more than maybe eight = computationally complex)
 - manufacture the errors I want to test on
 
+--> key idea: rather than using (just) a word embedding, want to learn a representation of the word on the character level that considers each character in turn and use that as the input to the word-level RNN
+--> questions:
+	How to do this with weighting for neighboring characters rather than just one character at a time?
+	Do I want to use pretrained word vectors at all?
+	Should I use an RNN or CNN autoencoder for the word level?
+
 Resources
 
 https://arxiv.org/pdf/1611.02344.pdf
 https://github.com/atpaino/deep-text-corrector
+https://web.stanford.edu/class/cs224n/reports/2762063.pdf
