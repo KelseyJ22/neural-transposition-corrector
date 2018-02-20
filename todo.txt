@@ -1,0 +1,10 @@
+TODOS
+
+1) download data
+2) download embeddings
+3) complete data read-in and preprocessing
+4) complete embedding loading
+5) decide where the eventual character-level stuff will go
+6) begin debug of basic RNN
+7) research fine-tuning encoder/decoder in TensorFlow (as opposed to seq2seq's built in)
+8) figure out what's up with transposing of the batches
