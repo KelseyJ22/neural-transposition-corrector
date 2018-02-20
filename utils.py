@@ -18,9 +18,27 @@ class Batch:
 		self.target_seq = []
 		self.weights = []
 
-def load_embeddings(data):
-	# TODO complete this
+
+def load_data(fname):
 	pass
+	
+
+def vectorize(input_list):
+	res = np.zeros([len(input_list)])
+	for i in range(0, len(input_list)):
+		res[i] = float(input_list[i])
+	return res
+
+
+def load_embeddings(data):
+	vecs = open('Data/wordVectors.txt', 'r').readlines()
+	vocab = open('Data/vocab.txt', 'r').readlines()
+	assert len(vecs) == len(vocab)
+	print 'read in ', len(vocab), 'words and wordvectors'
+	all_vocab = dict()
+	for i in range(0, len(vocab)):
+		all_vocab[vocab[i]] = vectorize(vecs[i])
+	return all_vocab
 
 
 def generate_errors(data):
