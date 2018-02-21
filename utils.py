@@ -1,9 +1,8 @@
 import numpy as np
-import nltk
 import math
 import random
+import re
 
-# TODO: define all of these
 start = '<s>'
 end = '</s>'
 pad = '0'
@@ -24,12 +23,12 @@ def parse(line):
 	start = line.rfind('+')
 	if start != -1:
 		line = line[start:]
-	sentences = line.split('.').split('?').split('!') # split by sentence
+	sentences = re.split('\.*\?*\!*', line) # split into sentences
 	for sentence in sentences: # want each sentence to be its own dataset
 		sent = list()
 		words = sentence.split(' ')
 		for word in words:
-			sent.append(word.strip().tolower())
+			sent.append(word.strip().lower())
 
 		if len(sent) > max_length: # don't want super long sentences
 			sent = sent[:max_length]
@@ -55,12 +54,33 @@ def load_embeddings(data):
 	return all_vocab
 
 
+def shuffle_string(string):
+    chars = list(string)
+    random.shuffle(chars)
+    return ''.join(chars)
+
+
+def add_error(word):
+	inner_chars = word[1:-1]
+	new_word = word[0], shuffle_string(inner_chars), word[-1]
+
+	return new_word
+
+def true_len(word):
+	count = 0
+	real_chars = set() # TODO
+	for char in word:
+		if char in real_chars:
+			count += 1
+	return count
+
+
 def generate_errors(data):
 	errored = list()
 	for sentence in data:
 		new_sentence = list()
 		for word in sentence:
-			if len(word) > 3:
+			if true_len(word) > 3:
 				gen_error = random.randint(0, 3)
 				if gen_error == 0:
 					word = add_error(word)
@@ -69,7 +89,7 @@ def generate_errors(data):
 	return errored
 
 
-def load_data():
+def load_data(fname):
 	# read in data
 	data = open(fname, 'r')
 	dataset = list()
@@ -83,12 +103,12 @@ def load_data():
 	parsed_data = generate_errors(dataset)
 
 	# train/test split
-	train, test = data[0:10000], data[10000:] # TODO: define this split more intelligently
+	train, test = parsed_data[0:10000], parsed_data[10000:] # TODO: define this split more intelligently
 	
 	return train, test
 
 
-def reshape(batch):
+"""def reshape(batch):
 	# TODO: there has got to be a better way to do this
 	transposed_encoder_seqs = []
     for i in range(0, max_length):
@@ -115,7 +135,7 @@ def reshape(batch):
     batch.decoder_seq = transposed_decoder_seqs
     batch.target_seq = transposed_target_seqs
     batch.weights = transposed_weights
-    return batch
+    return batch"""
 
 
 def batchify(data, batch_size):
@@ -132,6 +152,7 @@ def batchify(data, batch_size):
 		batch.target_seq[i] = batch.target_seq[i] + [pad] * (max_length - len(batch.target_seq[i])) # right pad
 
 	return reshape(batch)
+
 
 
 def get_batch(data, sample_size, batch_size):

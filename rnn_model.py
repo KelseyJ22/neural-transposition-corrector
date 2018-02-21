@@ -11,6 +11,7 @@ import numpy as np
 import math
 from tqdm import tqdm
 from basic_model import Model
+import utils
 
 class Config:
 	def __init__(self):
@@ -23,15 +24,16 @@ class Config:
 		self.test = False
 		self.embedding_size = 100
 		self.num_layers = 2
+		self.test = False
 
 
 class OuterRNN:
 	def __init__(self):
 		self.config = Config()
-		self.model = Model(config)
+		self.model = Model(self.config)
 		self.model_dir = 'Psych209_RNN'
-        self.writer = tf.summary.FileWriter(self.model_dir)
-        self.saver = tf.train.Saver(max_to_keep=200)
+		self.writer = tf.summary.FileWriter(self.model_dir)
+		self.saver = tf.train.Saver(max_to_keep=200)
 		self.global_step = 0
 		self.sess = tf.Session()
 		self.num_epochs = 100
@@ -39,7 +41,7 @@ class OuterRNN:
 		self.print_interval = 100
 
 
-	def main(self):
+	def run(self):
 		train, test = utils.load_data('Data/movie_lines.txt')
 		embeddings = utils.load_embeddings()
 
@@ -55,26 +57,33 @@ class OuterRNN:
 
 				start_time = datetime.datetime.now()
 				for batch in tqdm(batches):
-					ops, feed = self.model.train_step(batch, True)
+					ops, feed = self.model.train_step(batch, training=True)
 					_, loss, summary = sess.run(ops + (merged_summaries,), feed)
 					self.writer.add_summary(summary, self.global_step)
-                    self.global_step += 1
+					self.global_step += 1
 
-                    # training status
-                    if self.global_step % self.print_interval == 0:
-                        perplexity = math.exp(float(loss)) if loss < 300 else float('inf')
-                        tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.global_step, loss, perplexity))
-                        # TODO: run test step periodically
-                        
-                    # save checkpoint
-                    if self.global_step % self.save_interval == 0:
-                        self.save_session(sess)
+					# training status
+					if self.global_step % self.print_interval == 0:
+						perplexity = math.exp(float(loss)) if loss < 300 else float('inf')
+						tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.global_step, loss, perplexity))
+						# run test periodically
+						ops, feed = self.model.train_step(batch, training=False)
+						_, loss, summary = sess.run(ops + (merged_summaries,), feed)
 
-                end_time = datetime.datetime.now()
-                print 'Epoch finish in ', end_time-start_time, 'ms'
+					# save checkpoint
+					if self.global_step % self.save_interval == 0:
+						self.save_session(sess)
 
-     def save_session(self, sess):
-     	print 'Saving session at checkpoint', self.global_step
-     	name = self.model_dir + str(self.global_step)
-     	self.saver.save(sess, name)
-     	print 'Save complete with name', name
+				end_time = datetime.datetime.now()
+				print 'Epoch finish in ', end_time-start_time, 'ms'
+
+	def save_session(self, sess):
+		print 'Saving session at checkpoint', self.global_step
+		name = self.model_dir + str(self.global_step)
+		self.saver.save(sess, name)
+		print 'Save complete with name', name
+
+"""rnn_model = OuterRNN()
+rnn_model.run()"""
+train, test = utils.load_data('Data/movie_lines.txt')
+embeddings = utils.load_embeddings()
