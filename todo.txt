@@ -1,9 +1,12 @@
 TODOS
-- decide where the eventual character-level stuff will go
-- research fine-tuning encoder/decoder in TensorFlow (as opposed to seq2seq's built in)
-- figure out what's up with transposing of the batches
-- for input parsing:
-	- don't shuffle apostrophes
-	- discard empty sentences
-	- chop out empty strings from sentences
-	- discard parentheses and dashes
+- rewrite RNN model with more sensical structure
+	BASIC IDEA
+	encoder placeholder = encoder_input.size
+	decoder placeholder = decoder_input.size
+	batches are of the form encoder_input, decoder_output
+	want to have an encoder of multiRNNCell
+	want to have a decoder using TF's fancy new decoder stuff
+	need to learn the embeddings
+		instantiate as trainable=True
+		lookup all misspellings as UNK
+		also convolve or recur over the characters in the word
