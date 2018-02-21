@@ -19,11 +19,13 @@ class Model:
         # construct
         self.build_network()
 
+
     def create_rnn_cell(self):
     	cell = tf.contrib.rnn.BasicLSTMCell(self.config.hidden_size,)
     	if self.train:
     		cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prop=1.0, output_keep_prob=self.config.dropout)
     	return cell
+
 
     def build_network(self):
 	    cell = tf.contrib.rnn.MultiRNNCell([create_rnn_cell()] for _ in range(self.config.num_layers))
@@ -47,15 +49,17 @@ class Model:
 	    	opt = tf.train.AdamOptimizer(learning_rate = self.config.lr)
 	    	self.optimizer_op = opt.minimize(self.loss)
 
-	def step(self, batch):
+
+	def train_step(self, batch, training):
 		feed_dict = {}
 		ops = None
-		if self.args.test: # TEST
+		if not training: # TEST
 			for i in range(0, self.config.encoder_len):
 				feed_dict[self.encoder_inputs[i]] = batch.encoder_seq[i]
 			feed_dict[self.decoder_inputs[0]] = [self.data.go] # TODO: what is this?
 
 			ops = (self.outputs,)
+
 		else: # TRAIN
 			for i in range(0, self.config.encoder_len):
 				feed_dict[self.encoder_inputs[i]] = batch.encoder_seq[i]

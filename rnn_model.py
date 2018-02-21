@@ -40,8 +40,10 @@ class OuterRNN:
 
 
 	def main(self):
+		train, test = utils.load_data('Data/movie_lines.txt')
+		embeddings = utils.load_embeddings()
+
 		self.sess.run(tf.global_variables_initializer())
-		utils.load_embeddings(self.sess)
 		self.writer.add_graph(sess.graph)
 		merged_summaries = tf.summary.merge_all()
 
@@ -53,7 +55,7 @@ class OuterRNN:
 
 				start_time = datetime.datetime.now()
 				for batch in tqdm(batches):
-					ops, feed = self.model.train_step(batch)
+					ops, feed = self.model.train_step(batch, True)
 					_, loss, summary = sess.run(ops + (merged_summaries,), feed)
 					self.writer.add_summary(summary, self.global_step)
                     self.global_step += 1
@@ -62,7 +64,8 @@ class OuterRNN:
                     if self.global_step % self.print_interval == 0:
                         perplexity = math.exp(float(loss)) if loss < 300 else float('inf')
                         tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.global_step, loss, perplexity))
-
+                        # TODO: run test step periodically
+                        
                     # save checkpoint
                     if self.global_step % self.save_interval == 0:
                         self.save_session(sess)
@@ -75,8 +78,3 @@ class OuterRNN:
      	name = self.model_dir + str(self.global_step)
      	self.saver.save(sess, name)
      	print 'Save complete with name', name
-
-
-
-
-

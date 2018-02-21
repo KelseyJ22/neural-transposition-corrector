@@ -19,9 +19,23 @@ class Batch:
 		self.weights = []
 
 
-def load_data(fname):
-	pass
-	
+def parse(line):
+	parsed = list()
+	start = line.rfind('+')
+	if start != -1:
+		line = line[start:]
+	sentences = line.split('.').split('?').split('!') # split by sentence
+	for sentence in sentences: # want each sentence to be its own dataset
+		sent = list()
+		words = sentence.split(' ')
+		for word in words:
+			sent.append(word.strip().tolower())
+
+		if len(sent) > max_length: # don't want super long sentences
+			sent = sent[:max_length]
+		parsed.append(sent)
+	return parsed
+
 
 def vectorize(input_list):
 	res = np.zeros([len(input_list)])
@@ -57,9 +71,16 @@ def generate_errors(data):
 
 def load_data():
 	# read in data
-	# TODO choose dataset and read in
+	data = open(fname, 'r')
+	dataset = list()
+	for line in data.readlines():
+		text_data = parse(line)
+		for sentence in text_data:
+			dataset.append(sentence)
+	print 'read in ', len(dataset), 'samples'
+
 	# add transposition errors
-	parsed_data = generate_errors(data)
+	parsed_data = generate_errors(dataset)
 
 	# train/test split
 	train, test = data[0:10000], data[10000:] # TODO: define this split more intelligently
@@ -123,4 +144,4 @@ def get_batches(data, sample_size, batch_size):
 	for batch in get_batch(data, sample_size, batch_size):
 		batches.append(batchify(batch, batch_size))
 
-	return batch
+	return batches
