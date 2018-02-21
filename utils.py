@@ -37,10 +37,10 @@ def parse(line):
 
 
 def vectorize(input_list):
-	print input_list
-	res = np.zeros([len(input_list)])
-	for i in range(0, len(input_list)):
-		res[i] = float(input_list[i])
+	listified = input_list.split(' ')
+	res = np.zeros([len(listified)-1]) # last element is '\n' and we don't want it
+	for i in range(0, len(listified)-1):
+		res[i] = float(listified[i])
 	return res
 
 
@@ -64,8 +64,8 @@ def shuffle_string(string):
 def add_error(word):
 	inner_chars = word[1:-1]
 	new_word = word[0] + shuffle_string(inner_chars) + word[-1]
-
 	return new_word
+
 
 def true_len(word):
 	count = 0
@@ -75,17 +75,43 @@ def true_len(word):
 	return count
 
 
+def is_transposable(word):
+	if true_len(word) > 3:
+		if true_len(word) < 8:
+			if word.isalpha():
+				return True
+	return False
+
+
+def clean(word):
+	word = word.replace(',', '')
+	word = word.replace(';', '')
+	word = word.replace(':', '')
+	word = word.replace(')', '')
+	word = word.replace('(', '')
+	word = word.replace(']', '')
+	word = word.replace('[', '')
+	word = word.replace('-', '')
+	return word
+
+
 def generate_errors(data):
 	errored = list()
 	for sentence in data:
+		cleaned_sentence = list()
 		new_sentence = list()
 		for word in sentence:
-			if true_len(word) > 3:
+			if len(word) > 0:
+				cleaned_sentence.append(word)
+			if is_transposable(word):
 				gen_error = random.randint(0, 3)
 				if gen_error == 0:
 					word = add_error(word)
-			new_sentence.append(word)
-		errored.append((new_sentence, sentence)) # input, output pair
+			word = clean(word)
+			if len(word) > 0:
+				new_sentence.append(word)
+		if len(new_sentence) > 0:
+			errored.append((new_sentence, cleaned_sentence)) # input, output pair
 	return errored
 
 
@@ -108,61 +134,30 @@ def load_data(fname):
 	return train, test
 
 
-"""def reshape(batch):
-	# TODO: there has got to be a better way to do this
-	transposed_encoder_seqs = []
-    for i in range(0, max_length):
-        transposed_encoder_seq = []
-        for j in range(0, batch_size):
-            transposed_encoder_seq.append(batch.encoder_seq[j][i])
-        transposed_encoder_seqs.append(transposed_encoder_seq)
-    batch.encoder_seq = transposed_encoder_seqs
-
-    transposed_decoder_seqs = []
-    transposed_target_seq = []
-    transposed_weight = []
-    for i in range(0, max_length):
-        transposed_decoder_seq = []
-        transposed_target_seq = []
-        weightT = []
-        for j in range(batchSize):
-            transposed_decoder_seq.append(batch.decoder_seq[j][i])
-            transposed_target_seq.append(batch.target_seq[j][i])
-            transposed_weight.append(batch.weights[j][i])
-        transposed_decoder_seqs.append(transposed_decoder_seq)
-        transposed_target_seqs.append(transposed_target_seq)
-        transposed_weights.append(transposed_weight)
-    batch.decoder_seq = transposed_decoder_seqs
-    batch.target_seq = transposed_target_seqs
-    batch.weights = transposed_weights
-    return batch"""
-
-
 def batchify(data, batch_size):
 	batch = Batch()
-	for i in range(0, batch_size):
+	for i in range(0, len(data)):
 		sample = data[i]
 		batch.encoder_seq.append(list(reversed(sample[0])))
-		batch.decoder_seq.append([start + sample[1] + end])
-		batch.target_seq.append(batch.decoder_seq[-1][1:])
+		batch.decoder_seq.append([start] + sample[1] + [end])
+		batch.target_seq.append(batch.decoder_seq[-1][1:]) # shift over by one
 
 		batch.encoder_seq[i] = [pad] * (max_length - len(batch.encoder_seq[i])) + batch.encoder_seq[i] # left padding
 		batch.weights.append([1.0] * len(batch.target_seq[i]) + [0.0] * (max_length - len(batch.target_seq[i]))) # right padding
 		batch.decoder_seq[i] = batch.decoder_seq[i] + [pad] * (max_length - len(batch.decoder_seq[i])) # right padding
 		batch.target_seq[i] = batch.target_seq[i] + [pad] * (max_length - len(batch.target_seq[i])) # right pad
-
-	return reshape(batch)
-
+	return batch
 
 
-def get_batch(data, sample_size, batch_size):
-	for i in range(0, sample_size, batch_size):
-		yield data[i:min(i + batch_size, sample_size)] 
+def get_batch(data, batch_size):
+	for i in range(0, batch_size):
+		yield data[i:i + batch_size] 
 
 
-def get_batches(data, sample_size, batch_size):
+def get_batches(data, batch_size):
+	batches = list()
 	random.shuffle(data) # reshuffle for each iteration
-	for batch in get_batch(data, sample_size, batch_size):
+	for batch in get_batch(data, batch_size):
 		batches.append(batchify(batch, batch_size))
 
 	return batches

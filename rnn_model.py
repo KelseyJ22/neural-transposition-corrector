@@ -25,6 +25,7 @@ class Config:
 		self.embedding_size = 100
 		self.num_layers = 2
 		self.test = False
+		self.batch_size = 100
 
 
 class OuterRNN:
@@ -53,7 +54,7 @@ class OuterRNN:
 
 		for epoch in range(self.num_epochs):
 				print '-----Epoch', epoch, '-----'
-				batches = utils.get_batches()
+				batches = utils.get_batches(train, self.config.batch_size)
 
 				start_time = datetime.datetime.now()
 				for batch in tqdm(batches):
@@ -83,7 +84,9 @@ class OuterRNN:
 		self.saver.save(sess, name)
 		print 'Save complete with name', name
 
-"""rnn_model = OuterRNN()
-rnn_model.run()"""
-#train, test = utils.load_data('Data/movie_lines.txt')
-embeddings = utils.load_embeddings()
+rnn_model = OuterRNN()
+rnn_model.run()
+
+
+
+
