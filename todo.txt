@@ -1,4 +1,9 @@
 TODOS
-5) decide where the eventual character-level stuff will go
-7) research fine-tuning encoder/decoder in TensorFlow (as opposed to seq2seq's built in)
-8) figure out what's up with transposing of the batches
+- decide where the eventual character-level stuff will go
+- research fine-tuning encoder/decoder in TensorFlow (as opposed to seq2seq's built in)
+- figure out what's up with transposing of the batches
+- for input parsing:
+	- don't shuffle apostrophes
+	- discard empty sentences
+	- chop out empty strings from sentences
+	- discard parentheses and dashes

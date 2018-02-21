@@ -85,5 +85,5 @@ class OuterRNN:
 
 """rnn_model = OuterRNN()
 rnn_model.run()"""
-train, test = utils.load_data('Data/movie_lines.txt')
+#train, test = utils.load_data('Data/movie_lines.txt')
 embeddings = utils.load_embeddings()

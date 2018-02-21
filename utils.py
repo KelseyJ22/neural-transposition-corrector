@@ -22,7 +22,7 @@ def parse(line):
 	parsed = list()
 	start = line.rfind('+')
 	if start != -1:
-		line = line[start:]
+		line = line[start+1:]
 	sentences = re.split('\.*\?*\!*', line) # split into sentences
 	for sentence in sentences: # want each sentence to be its own dataset
 		sent = list()
@@ -37,13 +37,14 @@ def parse(line):
 
 
 def vectorize(input_list):
+	print input_list
 	res = np.zeros([len(input_list)])
 	for i in range(0, len(input_list)):
 		res[i] = float(input_list[i])
 	return res
 
 
-def load_embeddings(data):
+def load_embeddings():
 	vecs = open('Data/wordVectors.txt', 'r').readlines()
 	vocab = open('Data/vocab.txt', 'r').readlines()
 	assert len(vecs) == len(vocab)
@@ -62,15 +63,14 @@ def shuffle_string(string):
 
 def add_error(word):
 	inner_chars = word[1:-1]
-	new_word = word[0], shuffle_string(inner_chars), word[-1]
+	new_word = word[0] + shuffle_string(inner_chars) + word[-1]
 
 	return new_word
 
 def true_len(word):
 	count = 0
-	real_chars = set() # TODO
 	for char in word:
-		if char in real_chars:
+		if char.isalpha():
 			count += 1
 	return count
 
@@ -103,7 +103,7 @@ def load_data(fname):
 	parsed_data = generate_errors(dataset)
 
 	# train/test split
-	train, test = parsed_data[0:10000], parsed_data[10000:] # TODO: define this split more intelligently
+	train, test = parsed_data[0:100000], parsed_data[100000:110000]
 	
 	return train, test
 
