@@ -116,6 +116,7 @@ def generate_errors(data):
 
 
 def load_data(fname):
+	frequencies = dict()
 	# read in data
 	data = open(fname, 'r')
 	dataset = list()
@@ -123,7 +124,16 @@ def load_data(fname):
 		text_data = parse(line)
 		for sentence in text_data:
 			dataset.append(sentence)
+
+			for word in sentence:
+				w = clean(word.strip().lower())
+				if w in frequencies:
+					frequencies[w] += 1
+				else:
+					frequencies[w] = 1
+
 	print 'read in ', len(dataset), 'samples'
+	print 'found a total of', len(frequencies), 'words'
 
 	# add transposition errors
 	parsed_data = generate_errors(dataset)
@@ -131,7 +141,7 @@ def load_data(fname):
 	# train/test split
 	train, test = parsed_data[0:100000], parsed_data[100000:110000]
 	
-	return train, test
+	return train, test, frequencies
 
 
 def batchify(data, batch_size):
