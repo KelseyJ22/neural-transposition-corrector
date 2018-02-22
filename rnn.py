@@ -34,6 +34,7 @@ class RNN:
 		self.num_epochs = 100
 		self.save_interval = 1000
 		self.print_interval = 100
+		self.word_to_id = dict()
 
 
 	def create_embedding(self, word):
@@ -53,11 +54,16 @@ class RNN:
 
 	def load_embeddings(self, batch):
 		embedded = np.array((len(batch), self.max_sentence_len, self.embedding_size))
-		for i, sentence in batch:
+		labels = np.array((len(batch), self.max_sentence_len))
+		for i, sentence in batch.input:
 			for j, word in sentence:
 				embedded[i][j] = self.create_embedding(word)
 
-		return embedded
+		for i, sentence in batch.label:
+			for j, word in sentence:
+				labels[i][j] = self.word_to_id[word]
+
+		return embedded, labels
 
 
  	def add_placeholders(self):
@@ -121,15 +127,27 @@ class RNN:
 
 
     def train_on_batch(self, sess, inputs_batch, labels_batch):
-        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch,
-                                     dropout=self.config.dropout)
+        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch, dropout=self.config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
 
 
+    def load_word_lookup(self, frequencies):
+    	lookups = dict()
+    	current_count = 0
+    	for word in frequencies:
+    		if frequencies[word] > 80:
+    			if word not in lookups:
+    				lookups[word] = current_count
+    				current_count += 1
+
+    	return lookups
+
+
 	def run(self):
-		train, test = utils.load_data('Data/movie_lines.txt')
+		train, test, frequencies = utils.load_data('Data/movie_lines.txt')
 		embeddings = utils.load_embeddings()
+		self.word_to_id = self.load_word_lookup(frequencies)
 
 		self.sess.run(tf.global_variables_initializer())
 		self.writer.add_graph(sess.graph)
@@ -143,8 +161,8 @@ class RNN:
 
 				start_time = datetime.datetime.now()
 				for batch in tqdm(batches):
-					embedded = self.load_embeddings(batch)
-					loss = self.train_on_batch(sess, embedded)
+					embedded, labels = self.load_embeddings(batch)
+					loss = self.train_on_batch(sess, embedded, labels)
 					summary = tf.summary.scalar('loss', loss) # for logging
 					self.writer.add_summary(summary, self.global_step)
 					self.global_step += 1

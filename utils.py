@@ -95,21 +95,28 @@ def clean(word):
 	return word
 
 
-def generate_errors(data):
+def generate_errors(data, frequencies):
 	errored = list()
 	for sentence in data:
 		cleaned_sentence = list()
 		new_sentence = list()
 		for word in sentence:
 			if len(word) > 0:
-				cleaned_sentence.append(word)
+				if frequencies[word] > 80:
+					cleaned_sentence.append(word)
+				else:
+					cleaned_sentence.append(UNK)
 			if is_transposable(word):
 				gen_error = random.randint(0, 3)
 				if gen_error == 0:
 					word = add_error(word)
 			word = clean(word)
 			if len(word) > 0:
-				new_sentence.append(word)
+				if frequencies[word] > 80:
+					new_sentence.append(word)
+				else:
+					new_sentence.append(UNK)
+
 		if len(new_sentence) > 0:
 			errored.append((new_sentence, cleaned_sentence)) # input, output pair
 	return errored
@@ -136,7 +143,7 @@ def load_data(fname):
 	print 'found a total of', len(frequencies), 'words'
 
 	# add transposition errors
-	parsed_data = generate_errors(dataset)
+	parsed_data = generate_errors(dataset, frequencies)
 
 	# train/test split
 	train, test = parsed_data[0:100000], parsed_data[100000:110000]
