@@ -10,14 +10,6 @@ max_length = 10
 unknown = '<UNK>'
 
 
-class Batch:
-	def __init__(self):
-		self.encoder_seq = []
-		self.decoder_seq = []
-		self.target_seq = []
-		self.weights = []
-
-
 def parse(line):
 	parsed = list()
 	start = line.rfind('+')
@@ -102,20 +94,20 @@ def generate_errors(data, frequencies):
 		new_sentence = list()
 		for word in sentence:
 			if len(word) > 0:
-				if frequencies[word] > 80:
+				if word in frequencies and frequencies[word] > 80:
 					cleaned_sentence.append(word)
 				else:
-					cleaned_sentence.append(UNK)
+					cleaned_sentence.append(unknown)
 			if is_transposable(word):
 				gen_error = random.randint(0, 3)
 				if gen_error == 0:
 					word = add_error(word)
 			word = clean(word)
 			if len(word) > 0:
-				if frequencies[word] > 80:
+				if word in frequencies and frequencies[word] > 80:
 					new_sentence.append(word)
 				else:
-					new_sentence.append(UNK)
+					new_sentence.append(unknown)
 
 		if len(new_sentence) > 0:
 			errored.append((new_sentence, cleaned_sentence)) # input, output pair
@@ -152,18 +144,16 @@ def load_data(fname):
 
 
 def batchify(data, batch_size):
-	batch = Batch()
+	inputs = list()
+	labels = list()
 	for i in range(0, len(data)):
 		sample = data[i]
-		batch.encoder_seq.append(list(reversed(sample[0])))
-		batch.decoder_seq.append([start] + sample[1] + [end])
-		batch.target_seq.append(batch.decoder_seq[-1][1:]) # shift over by one
+		inputs.append(list(reversed(sample[0])))
+		labels.append([start] + sample[1] + [end])
 
-		batch.encoder_seq[i] = [pad] * (max_length - len(batch.encoder_seq[i])) + batch.encoder_seq[i] # left padding
-		batch.weights.append([1.0] * len(batch.target_seq[i]) + [0.0] * (max_length - len(batch.target_seq[i]))) # right padding
-		batch.decoder_seq[i] = batch.decoder_seq[i] + [pad] * (max_length - len(batch.decoder_seq[i])) # right padding
-		batch.target_seq[i] = batch.target_seq[i] + [pad] * (max_length - len(batch.target_seq[i])) # right pad
-	return batch
+		inputs[i] = [pad] * (max_length - len(inputs[i])) + inputs[i] # left padding
+		labels[i] = labels[i] + [pad] * (max_length - len(labels[i])) # right padding
+	return (inputs, labels)
 
 
 def get_batch(data, batch_size):
