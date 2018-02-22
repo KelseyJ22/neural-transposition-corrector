@@ -29,6 +29,9 @@ class RNN:
 		self.num_epochs = 100
 		self.save_interval = 1000
 		self.print_interval = 100
+		self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_len, self.config.embedding_size), name="inputs")
+		self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_len), name="labels")
+		self.dropout_placeholder = tf.placeholder(tf.float32, name="dropout")
 
 
 	def create_embedding(self, word):
@@ -47,27 +50,33 @@ class RNN:
 
 
 	def load_embeddings(self, inputs, labels):
-		embedded = np.array((len(inputs), self.config.max_sentence_len, self.config.embedding_size))
-		labels = np.array((len(labels), self.config.max_sentence_len))
+		#embedded = np.array((len(inputs), self.config.max_sentence_len, self.config.embedding_size))
+		#labels = np.array((len(labels), self.config.max_sentence_len))
+		embedded = list()
+		labels = list()
 		for i in range(0, len(inputs)):
 			sentence = inputs[i]
+			embedded.append(list())
 			for j in  range(0, len(sentence)):
 				word = sentence[j]
-				embedded[i][j][:] = self.create_embedding(word)
+				embedded[i].append(list())
+				embedded[i][j] = self.create_embedding(word)
 
 		for i in range(0, len(labels)):
 			sentence = labels[i]
+			labels.append(list())
 			for j in  range(0, len(sentence)):
 				word = sentence[j]
-				labels[i][j][:] = self.word_to_id[word]
+				labels[i].append(list())
+				labels[i][j] = self.word_to_id[word]
 
-		return embedded, labels
+		return np.asarray(embedded), np.asarray(labels)
 
 
-	def add_placeholders(self):
+	"""def add_placeholders(self):
 		self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_len, self.config.embedding_size), name="inputs")
 		self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_len), name="labels")
-		self.dropout_placeholder = tf.placeholder(tf.float32, name="dropout")
+		self.dropout_placeholder = tf.placeholder(tf.float32, name="dropout")"""
 
 
 	def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
@@ -109,12 +118,12 @@ class RNN:
 
 	def add_loss_op(self, pred):
 		loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels_placeholder, logits=pred)
-		loss = tf.reduce_mean(loss_vector)
+		self.loss = tf.reduce_mean(loss_vector)
 		return loss
 
 
 	def add_training_op(self, loss):
-		train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
+		self.train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
 		return train_op
 
 
