@@ -4,6 +4,7 @@ import numpy as np
 import math
 from tqdm import tqdm
 import utils
+from model import Model
 
 
 class Config:
@@ -21,7 +22,7 @@ class Config:
 		self.batch_size = 100
 
 
-class RNN:
+class RNN(Model):
 	def __init__(self):
 		self.config = Config()
 		self.model_dir = 'Psych209_RNN'
@@ -50,8 +51,6 @@ class RNN:
 
 
 	def load_embeddings(self, inputs, labels):
-		#embedded = np.array((len(inputs), self.config.max_sentence_len, self.config.embedding_size))
-		#labels = np.array((len(labels), self.config.max_sentence_len))
 		embedded = list()
 		labels = list()
 		for i in range(0, len(inputs)):
@@ -73,10 +72,10 @@ class RNN:
 		return np.asarray(embedded), np.asarray(labels)
 
 
-	"""def add_placeholders(self):
+	def add_placeholders(self):
 		self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_len, self.config.embedding_size), name="inputs")
 		self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_len), name="labels")
-		self.dropout_placeholder = tf.placeholder(tf.float32, name="dropout")"""
+		self.dropout_placeholder = tf.placeholder(tf.float32, name="dropout")
 
 
 	def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
@@ -151,8 +150,8 @@ class RNN:
 		return lookups
 
 
-	#def run(self, sess, saver, writer, train, test, frequencies):
-	def run(self, sess, writer, train, test, frequencies):
+	def run(self, sess, saver, writer, train, test, frequencies):
+	#def run(self, sess, writer, train, test, frequencies):
 		self.word_to_id = self.load_word_lookup(frequencies)
 		for epoch in range(self.num_epochs):
 			print '-----Epoch', epoch, '-----'
@@ -189,21 +188,21 @@ class RNN:
 
 
 def run_rnn():
-		train, test, frequencies = utils.load_data('Data/movie_lines.txt')
-		embeddings = utils.load_embeddings()
-		
-		with tf.Graph().as_default():
-			model = RNN()
-			writer = tf.summary.FileWriter(model.model_dir)
-			merged_summaries = tf.summary.merge_all()
+	train, test, frequencies = utils.load_data('Data/movie_lines.txt')
+	embeddings = utils.load_embeddings()
+	
+	with tf.Graph().as_default():
+		model = RNN()
+		writer = tf.summary.FileWriter(model.model_dir)
+		merged_summaries = tf.summary.merge_all()
 
-			print 'Starting training...'
-			with tf.Session() as sess:
-				sess.run(tf.global_variables_initializer())
-				#saver = tf.train.Saver()
-				writer.add_graph(sess.graph)
-				#model.run(sess, saver, writer, train, test, frequencies)
-				model.run(sess, writer, train, test, frequencies)
+		print 'Starting training...'
+		with tf.Session() as sess:
+			sess.run(tf.global_variables_initializer())
+			saver = tf.train.Saver(sess)
+			writer.add_graph(sess.graph)
+			model.run(sess, saver, writer, train, test, frequencies)
+			#model.run(sess, writer, train, test, frequencies)
 				
 
 run_rnn()
