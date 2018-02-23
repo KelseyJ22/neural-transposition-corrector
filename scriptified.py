@@ -68,73 +68,78 @@ def load_embeddings(inputs, labels):
 
 def load_word_lookup(frequencies):
 	lookups = dict()
-	current_count = 0
+	current_count = 1
 	for word in frequencies:
 		if frequencies[word] > 80:
 			if word not in lookups:
 				lookups[word] = current_count
 				current_count += 1
 
+	# map all non-word characters to 0
+	lookups['<s>'] = 0
+	lookups['</s>'] = 0
+	lookups['<UNK>'] = 0
+	lookups['0'] = 0
 	return lookups
 
-
-config = Config()
-
-data = tf.placeholder(tf.float32, shape=(None, config.max_sentence_len, config.embedding_size), name='inputs')
-labels = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len), name='labels')
-
-#cell = tf.contrib.rnn.BasicLSTMCell(config.hidden_size, forget_bias=0.0, state_is_tuple=True)
-#multi_cell = tf.nn.rnn_cell.MultiRNNCell([cell] * config.num_layers, state_is_tuple=True)
-
-"""outputs = list()
-with tf.variable_scope('RNN'):
-	for time_step in range(config.max_sentence_len):
-		if time_step > 0:
-			tf.get_variable_scope().reuse_variables()
-		(cell_output, state) = multi_cell(data[:, time_step, :], state)
-		outputs.append(cell_output)"""
-
-#inputs = tf.unstack(data, num=config.num_layers, axis=1)
-
-#outputs, state = tf.nn.static_rnn(multi_cell, inputs, initial_state=rnn_tuple_state)
-"""lstm_cell = tf.nn.rnn_cell.DropoutWrapper(cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=config.hidden_size), output_keep_prob=config.keep_prob)
-
-with tf.name_scope('lstm'):
-	cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * config.num_layers)
-	initial_state = cell.zero_state(batch_size=config.batch_size, dtype=tf.float32)
-	outputs, final_state = tf.nn.dynamic_rnn(cell=cell, inputs=data, initial_state=initial_state)"""
-
-
-U = tf.get_variable("U", shape=[config.hidden_size, config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
-b2 = tf.get_variable("b2", shape=[config.vocab_size,], initializer = tf.constant_initializer(0))
-h_t = tf.zeros([tf.shape(data)[0], config.hidden_size]) # initialize hidden state
-
-preds = list()
-with tf.variable_scope("RNN"):
-	for time_step in range(config.max_sentence_len):
-		if time_step > 0:
-			tf.get_variable_scope().reuse_variables()
-
-		o_t, h_t = utils.GRU(data[:,time_step,:], h_t, config.embedding_size, config.hidden_size)
-		o_drop_t = tf.nn.dropout(o_t, config.keep_prob)
-		y_t = tf.matmul(o_drop_t, U) + b2
-		preds.append(y_t)
-
-"""with tf.variable_scope('softmax'):
-	W = tf.get_variable('W', [config.embedding_size, config.vocab_size], initializer=tf.xavier_initializer())
-	b = tf.get_variable('b', [config.vocab_size], initializer=tf.constant_initializer(0.0))
-
-preds = [tf.matmul(output, W) + b for output in outputs]"""
-
-loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=preds)
-loss = tf.reduce_mean(loss_vector)
-
-opt = tf.train.AdamOptimizer(config.lr).minimize(loss)
-
-train, test, frequencies = utils.load_data('Data/movie_lines.txt')
-embeddings = utils.load_embeddings()
-
 with tf.Graph().as_default():
+
+	config = Config()
+
+	data = tf.placeholder(tf.float32, shape=(None, config.max_sentence_len, config.embedding_size), name='data')
+	labels = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len), name='labels')
+
+	#cell = tf.contrib.rnn.BasicLSTMCell(config.hidden_size, forget_bias=0.0, state_is_tuple=True)
+	#multi_cell = tf.nn.rnn_cell.MultiRNNCell([cell] * config.num_layers, state_is_tuple=True)
+
+	"""outputs = list()
+	with tf.variable_scope('RNN'):
+		for time_step in range(config.max_sentence_len):
+			if time_step > 0:
+				tf.get_variable_scope().reuse_variables()
+			(cell_output, state) = multi_cell(data[:, time_step, :], state)
+			outputs.append(cell_output)"""
+
+	#inputs = tf.unstack(data, num=config.num_layers, axis=1)
+
+	#outputs, state = tf.nn.static_rnn(multi_cell, inputs, initial_state=rnn_tuple_state)
+	"""lstm_cell = tf.nn.rnn_cell.DropoutWrapper(cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=config.hidden_size), output_keep_prob=config.keep_prob)
+
+	with tf.name_scope('lstm'):
+		cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * config.num_layers)
+		initial_state = cell.zero_state(batch_size=config.batch_size, dtype=tf.float32)
+		outputs, final_state = tf.nn.dynamic_rnn(cell=cell, inputs=data, initial_state=initial_state)"""
+
+
+	U = tf.get_variable("U", shape=[config.hidden_size, config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
+	b2 = tf.get_variable("b2", shape=[config.vocab_size,], initializer = tf.constant_initializer(0))
+	h_t = tf.zeros([tf.shape(data)[0], config.hidden_size]) # initialize hidden state
+
+	preds = list()
+	with tf.variable_scope("RNN"):
+		for time_step in range(config.max_sentence_len):
+			if time_step > 0:
+				tf.get_variable_scope().reuse_variables()
+
+			o_t, h_t = utils.GRU(data[:,time_step,:], h_t, config.embedding_size, config.hidden_size)
+			o_drop_t = tf.nn.dropout(o_t, config.keep_prob)
+			y_t = tf.matmul(o_drop_t, U) + b2
+			preds.append(y_t)
+
+	"""with tf.variable_scope('softmax'):
+		W = tf.get_variable('W', [config.embedding_size, config.vocab_size], initializer=tf.xavier_initializer())
+		b = tf.get_variable('b', [config.vocab_size], initializer=tf.constant_initializer(0.0))
+
+	preds = [tf.matmul(output, W) + b for output in outputs]"""
+
+	loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=preds)
+	loss = tf.reduce_mean(loss_vector)
+
+	opt = tf.train.AdamOptimizer(config.lr).minimize(loss)
+
+	train, test, frequencies = utils.load_data('Data/movie_lines.txt')
+	embeddings = utils.load_embeddings()
+
 	writer = tf.summary.FileWriter(config.model_dir)
 	merged_summaries = tf.summary.merge_all()
 
@@ -152,8 +157,8 @@ with tf.Graph().as_default():
 			for batch in tqdm(batches):
 
 				embedded, one_hot_labels = load_embeddings(batch[0], batch[1])
-				state = np.zeros((config.num_layers, 2, config.batch_size, config.hidden_size))
-				feed = {data: embedded, labels: one_hot_labels, init_state: state}
+				print 'this batch shapes:', embedded.shape, one_hot_labels.shape
+				feed = {data: embedded, labels: one_hot_labels}
 				_, loss = sess.run([opt, loss], feed_dict=feed)
 
 				summary = tf.summary.scalar('loss', loss) # for logging
