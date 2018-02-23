@@ -11,7 +11,6 @@ class Config:
 	def __init__(self):
 		self.character_set = 'abcdefghijklmnopqrstuvwxyz' # only dealing with lowercase alphabetic characters
 		self.hidden_size = 512
-		self.dropout = 0.9
 		self.max_sentence_len = 10
 		self.vocab_size = 2000
 		self.lr = 0.001
@@ -25,6 +24,7 @@ class Config:
 		self.num_epochs = 100
 		self.save_interval = 1000
 		self.print_interval = 100
+		self.keep_prob = 0.9
 
 
 def create_embedding(word):
@@ -44,8 +44,9 @@ def create_embedding(word):
 
 def load_embeddings(inputs, labels):
 	embedded = list()
-	labels = list()
+	parsed_labels = list()
 	for i in range(0, len(inputs)):
+	# embedded will be of shape [batch_size, max_sentence_length, embedding_size]
 		sentence = inputs[i]
 		embedded.append(list())
 		for j in  range(0, len(sentence)):
@@ -54,14 +55,15 @@ def load_embeddings(inputs, labels):
 			embedded[i][j] = create_embedding(word)
 
 	for i in range(0, len(labels)):
+	# parsed_labels will be of shape [batch_size, max_sentence_length, 1]
 		sentence = labels[i]
-		labels.append(list())
+		parsed_labels.append(list())
 		for j in  range(0, len(sentence)):
 			word = sentence[j]
-			labels[i].append(list())
-			labels[i][j] = word_to_id[word]
+			parsed_labels[i].append(list())
+			parsed_labels[i][j] = word_to_id[word]
 
-	return np.asarray(embedded), np.asarray(labels)
+	return np.asarray(embedded), np.asarray(parsed_labels)
 
 
 def load_word_lookup(frequencies):
@@ -78,31 +80,53 @@ def load_word_lookup(frequencies):
 
 config = Config()
 
-data = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len, config.embedding_size), name="inputs")
-labels = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len), name="labels")
-dropout_rate = tf.placeholder(tf.float32, name="dropout")
+data = tf.placeholder(tf.float32, shape=(None, config.max_sentence_len, config.embedding_size), name='inputs')
+labels = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len), name='labels')
 
-preds = list() # will be predicted output at each timestep
-cell = LSTMCell(config.embedding_size, config.hidden_size)
+#cell = tf.contrib.rnn.BasicLSTMCell(config.hidden_size, forget_bias=0.0, state_is_tuple=True)
+#multi_cell = tf.nn.rnn_cell.MultiRNNCell([cell] * config.num_layers, state_is_tuple=True)
 
-U = tf.get_variable('U', shape=[config.hidden_size, config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
-b2 = tf.get_variable('b2', initializer=tf.zeros([config.vocab_size,]))
-h_t = tf.zeros([tf.shape(x)[0], config.hidden_size])
-
+"""outputs = list()
 with tf.variable_scope('RNN'):
-    for time_step in range(config.max_sentence_len):
-        if time_step > 0:
-            tf.get_variable_scope().reuse_variables()
+	for time_step in range(config.max_sentence_len):
+		if time_step > 0:
+			tf.get_variable_scope().reuse_variables()
+		(cell_output, state) = multi_cell(data[:, time_step, :], state)
+		outputs.append(cell_output)"""
 
-        o_t, h_t = cell(data[:,time_step,:], h_t) # updates h_t for next iteration
-        o_drop_t = tf.nn.dropout(o_t, dropout_placeholder)
-        y_t = tf.matmul(o_drop_t, U) + b2
-        preds.append(y_t)
+#inputs = tf.unstack(data, num=config.num_layers, axis=1)
 
-preds = tf.transpose(tf.pack(preds), perm=[1,0,2]) # TODO check this
-pred = tf.reshape(preds, [-1, config.max_sentence_len])
+#outputs, state = tf.nn.static_rnn(multi_cell, inputs, initial_state=rnn_tuple_state)
+"""lstm_cell = tf.nn.rnn_cell.DropoutWrapper(cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=config.hidden_size), output_keep_prob=config.keep_prob)
 
-loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels_placeholder, logits=pred)
+with tf.name_scope('lstm'):
+	cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * config.num_layers)
+	initial_state = cell.zero_state(batch_size=config.batch_size, dtype=tf.float32)
+	outputs, final_state = tf.nn.dynamic_rnn(cell=cell, inputs=data, initial_state=initial_state)"""
+
+
+U = tf.get_variable("U", shape=[config.hidden_size, config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
+b2 = tf.get_variable("b2", shape=[config.vocab_size,], initializer = tf.constant_initializer(0))
+h_t = tf.zeros([tf.shape(data)[0], config.hidden_size]) # initialize hidden state
+
+preds = list()
+with tf.variable_scope("RNN"):
+	for time_step in range(config.max_sentence_len):
+		if time_step > 0:
+			tf.get_variable_scope().reuse_variables()
+
+		o_t, h_t = utils.GRU(data[:,time_step,:], h_t, config.embedding_size, config.hidden_size)
+		o_drop_t = tf.nn.dropout(o_t, config.keep_prob)
+		y_t = tf.matmul(o_drop_t, U) + b2
+		preds.append(y_t)
+
+"""with tf.variable_scope('softmax'):
+	W = tf.get_variable('W', [config.embedding_size, config.vocab_size], initializer=tf.xavier_initializer())
+	b = tf.get_variable('b', [config.vocab_size], initializer=tf.constant_initializer(0.0))
+
+preds = [tf.matmul(output, W) + b for output in outputs]"""
+
+loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=preds)
 loss = tf.reduce_mean(loss_vector)
 
 opt = tf.train.AdamOptimizer(config.lr).minimize(loss)
@@ -111,13 +135,12 @@ train, test, frequencies = utils.load_data('Data/movie_lines.txt')
 embeddings = utils.load_embeddings()
 
 with tf.Graph().as_default():
-	writer = tf.summary.FileWriter(model.model_dir)
+	writer = tf.summary.FileWriter(config.model_dir)
 	merged_summaries = tf.summary.merge_all()
 
 	print 'Starting training...'
 	with tf.Session() as sess:
 		sess.run(tf.global_variables_initializer())
-		saver = tf.train.Saver(sess)
 		writer.add_graph(sess.graph)
 		word_to_id = load_word_lookup(frequencies)
 
@@ -129,7 +152,8 @@ with tf.Graph().as_default():
 			for batch in tqdm(batches):
 
 				embedded, one_hot_labels = load_embeddings(batch[0], batch[1])
-				feed = {data: embedded, labels: one_hot_labels, dropout: config.dropout}
+				state = np.zeros((config.num_layers, 2, config.batch_size, config.hidden_size))
+				feed = {data: embedded, labels: one_hot_labels, init_state: state}
 				_, loss = sess.run([opt, loss], feed_dict=feed)
 
 				summary = tf.summary.scalar('loss', loss) # for logging
@@ -148,6 +172,7 @@ with tf.Graph().as_default():
 				if config.global_step % config.save_interval == 0:
 					print 'Saving session at checkpoint', config.global_step
 					name = config.model_dir + str(config.global_step)
+					saver = tf.train.Saver()
 					saver.save(sess, name)
 					print 'Save complete with name', name
 
