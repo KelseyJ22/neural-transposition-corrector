@@ -37,6 +37,7 @@ class Model:
 			self.decoder_targets = [tf.placeholder(tf.int32, [None, ], name='targets') for _ in range(self.config.decoder_len)]
 			self.decoder_weights = [tf.placeholder(tf.float32, [None, ], name='weights') for _ in range(self.config.decoder_len)]
 
+		
 		decoder_outputs, states = tf.contrib.seq2seq.embedding_rnn_seq2seq(self.encoder_inputs, self.decoder_inputs, cell, self.config.vocab_size, self.config.vocab_size, embedding_size=self.config.embedding_size, feed_previous=bool(self.config.test)) 
 
 		if self.config.test:

@@ -84,7 +84,6 @@ class Autoencoder:
 		self.saver.save(sess, name)
 		print 'Save complete with name', name
 
-#rnn_model = Autoencoder()
-#rnn_model.run()
+rnn_model = Autoencoder()
+rnn_model.run()
 
-utils.load_data('Data/movie_lines.txt')

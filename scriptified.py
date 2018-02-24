@@ -4,7 +4,6 @@ import numpy as np
 import math
 from tqdm import tqdm
 import utils
-from model import Model
 
 
 class Config:

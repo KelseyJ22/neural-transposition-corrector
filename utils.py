@@ -3,6 +3,7 @@ import math
 import random
 import re
 import tensorflow as tf
+import pickle
 
 start = '<s>'
 end = '</s>'
@@ -77,6 +78,7 @@ def is_transposable(word):
 
 
 def clean(word):
+	word = word.strip().lower()
 	word = word.replace(',', '')
 	word = word.replace(';', '')
 	word = word.replace(':', '')
@@ -86,8 +88,8 @@ def clean(word):
 	word = word.replace('[', '')
 	word = word.replace('-', '')
 	word = word.replace('<u>', '')
-	word = word.replace("\"",'')
-	return word
+	word = word.replace("\"", '')
+	return str(word)
 
 
 def generate_errors(data, frequencies):
@@ -126,13 +128,13 @@ def load_data(fname):
 		text_data = parse(line)
 		for sentence in text_data:
 			dataset.append(sentence)
-
 			for word in sentence:
-				w = clean(word.strip().lower())
-				if w in frequencies:
-					frequencies[w] += 1
-				else:
-					frequencies[w] = 1
+				w = clean(word)
+				if len(w) > 0:
+					if w in frequencies:
+						frequencies[w] += 1
+					else:
+						frequencies[w] = 1
 
 	print('read in ', len(dataset), 'samples')
 	print('found a total of', len(frequencies), 'words')
@@ -173,7 +175,7 @@ def get_batches(data, batch_size):
 	return batches
 
 
-def clean(sentence):
+def clean_sentence(sentence):
 	res = list()
 	for word in sentence:
 		res.append(word.strip())
@@ -184,14 +186,14 @@ def parse_str(line):
 	split = line.split('|')
 	i = split[0]
 	o = split[1]
-	inp = clean(i.split(','))
-	outp = clean(o.split(','))
+	inp = clean_sentence(i.split(','))
+	outp = clean_sentence(o.split(','))
 
 	return (inp, outp)
 
 
 def load_from_file():
-	t = open('train.txt', 'r')
+	"""t = open('train.txt', 'r')
 	train = list()
 	for line in t:
 		train.append(parse_str(line))
@@ -207,7 +209,22 @@ def load_from_file():
 	word_to_id = dict()
 	for line in w:
 		split = line.split(':')
-		word_to_id[split[0].strip()] = int(split[1])
+		word_to_id[split[0].strip()] = int(split[1])"""
+
+	test_file = 'test'
+	test_file_obj = open(test_file, 'r')
+	test = pickle.load(test_file_obj)
+	test_file_obj.close()
+
+	train_file = 'train'
+	train_file_obj = open(train_file, 'r')
+	train = pickle.load(train_file_obj)
+	train_file_obj.close()
+
+	word2id_file = 'word2id'
+	word2id_file_obj = open(word2id_file, 'r')
+	word_to_id = pickle.load(word2id_file_obj)
+	word2id_file_obj.close()
 
 	return train, test, word_to_id
 
