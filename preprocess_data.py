@@ -5,7 +5,7 @@ import pickle
 
 def load_word_lookup(frequencies):
 	lookups = dict()
-	current_count = 1
+	current_count = 0
 	for word in frequencies:
 		if frequencies[word] > 80:
 			if len(word) > 0:

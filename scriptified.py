@@ -95,6 +95,7 @@ with tf.Graph().as_default():
 	writer = tf.summary.FileWriter(config.model_dir)
 	merged_summaries = tf.summary.merge_all()
 
+	best_perplexity = 10000
 	print('Starting training...')
 	with tf.Session() as sess:
 		sess.run(tf.global_variables_initializer())
@@ -119,17 +120,15 @@ with tf.Graph().as_default():
 				if config.global_step % config.print_interval == 0:
 					perplexity = math.exp(float(curr_loss)) if curr_loss < 300 else float('inf')
 					tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (config.global_step, curr_loss, perplexity))
+					if perplexity < best_perplexity:
+						print('New best model! Saving...')
+						name = config.model_dir + '/' + str(config.global_step)
+						saver = tf.train.Saver()
+						saver.save(sess, name)
+						print('Save complete with name', name)
 					# run test periodically
 					#feed = create_feed_dict(embedded)
 					#predictions = sess.run(tf.argmax(pred, axis=1), feed_dict=feed)
-
-				# save checkpoint
-				if config.global_step % config.save_interval == 0:
-					print('Saving session at checkpoint', config.global_step)
-					name = config.model_dir + str(config.global_step)
-					saver = tf.train.Saver()
-					saver.save(sess, name)
-					print('Save complete with name', name)
 
 
 			end_time = datetime.datetime.now()
