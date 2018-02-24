@@ -114,14 +114,14 @@ with tf.Graph().as_default():
 	writer = tf.summary.FileWriter(config.model_dir)
 	merged_summaries = tf.summary.merge_all()
 
-	print 'Starting training...'
+	print('Starting training...')
 	with tf.Session() as sess:
 		sess.run(tf.global_variables_initializer())
 		writer.add_graph(sess.graph)
 		word_to_id = load_word_lookup(frequencies)
 
 		for epoch in range(config.num_epochs):
-			print '-----Epoch', epoch, '-----'
+			print('-----Epoch', epoch, '-----')
 			batches = utils.get_batches(train, config.batch_size)
 
 			start_time = datetime.datetime.now()
@@ -145,15 +145,15 @@ with tf.Graph().as_default():
 
 				# save checkpoint
 				if config.global_step % config.save_interval == 0:
-					print 'Saving session at checkpoint', config.global_step
+					print('Saving session at checkpoint', config.global_step)
 					name = config.model_dir + str(config.global_step)
 					saver = tf.train.Saver()
 					saver.save(sess, name)
-					print 'Save complete with name', name
+					print('Save complete with name', name)
 
 
 			end_time = datetime.datetime.now()
-			print 'Epoch finished in ', end_time - start_time, 'ms'
+			print('Epoch finished in ', end_time - start_time, 'ms')
 				
 
 
