@@ -64,29 +64,12 @@ def load_embeddings(config, inputs, labels):
 	return np.asarray(embedded), np.asarray(parsed_labels)
 
 
-def load_word_lookup(frequencies):
-	lookups = dict()
-	current_count = 1
-	for word in frequencies:
-		if frequencies[word] > 80:
-			if word not in lookups:
-				lookups[word] = current_count
-				current_count += 1
-
-	# map all non-word characters to 0
-	lookups['<s>'] = 0
-	lookups['</s>'] = 0
-	lookups['<UNK>'] = 0
-	lookups['0'] = 0
-	return lookups
-
 with tf.Graph().as_default():
 
 	config = Config()
 
 	data = tf.placeholder(tf.float32, shape=(None, config.max_sentence_len, config.embedding_size), name='data')
 	labels = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len), name='labels')
-
 
 	U = tf.get_variable("U", shape=[config.hidden_size, config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
 	b2 = tf.get_variable("b2", shape=[config.vocab_size,], initializer = tf.constant_initializer(0))
@@ -108,8 +91,7 @@ with tf.Graph().as_default():
 
 	opt = tf.train.AdamOptimizer(config.lr).minimize(loss)
 
-	train, test, frequencies = utils.load_data('Data/movie_lines.txt')
-	embeddings = utils.load_embeddings()
+	train, test, word_to_id = utils.load_from_file()
 
 	writer = tf.summary.FileWriter(config.model_dir)
 	merged_summaries = tf.summary.merge_all()
@@ -118,7 +100,6 @@ with tf.Graph().as_default():
 	with tf.Session() as sess:
 		sess.run(tf.global_variables_initializer())
 		writer.add_graph(sess.graph)
-		word_to_id = load_word_lookup(frequencies)
 
 		for epoch in range(config.num_epochs):
 			print('-----Epoch', epoch, '-----')

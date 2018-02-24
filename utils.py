@@ -41,7 +41,7 @@ def load_embeddings():
 	vecs = open('Data/wordVectors.txt', 'r').readlines()
 	vocab = open('Data/vocab.txt', 'r').readlines()
 	assert len(vecs) == len(vocab)
-	print 'read in ', len(vocab), 'words and wordvectors'
+	print('read in ', len(vocab), 'words and wordvectors')
 	all_vocab = dict()
 	for i in range(0, len(vocab)):
 		all_vocab[vocab[i]] = vectorize(vecs[i])
@@ -85,6 +85,8 @@ def clean(word):
 	word = word.replace(']', '')
 	word = word.replace('[', '')
 	word = word.replace('-', '')
+	word = word.replace('<u>', '')
+	word = word.replace("\"",'')
 	return word
 
 
@@ -94,20 +96,20 @@ def generate_errors(data, frequencies):
 		cleaned_sentence = list()
 		new_sentence = list()
 		for word in sentence:
-			if len(word) > 0:
-				if word in frequencies and frequencies[word] > 80:
-					cleaned_sentence.append(word)
-				else:
-					cleaned_sentence.append(unknown)
-			if is_transposable(word):
-				gen_error = random.randint(0, 3)
-				if gen_error == 0:
-					word = add_error(word)
 			word = clean(word)
 			if len(word) > 0:
 				if word in frequencies and frequencies[word] > 80:
-					new_sentence.append(word)
+					cleaned_sentence.append(word)
+					if is_transposable(word):
+						gen_error = random.randint(0, 3)
+						if gen_error == 0:
+							new_sentence.append(add_error(word))
+						else:
+							new_sentence.append(word)
+					else:
+						new_sentence.append(word)
 				else:
+					cleaned_sentence.append(unknown)
 					new_sentence.append(unknown)
 
 		if len(new_sentence) > 0:
@@ -132,8 +134,8 @@ def load_data(fname):
 				else:
 					frequencies[w] = 1
 
-	print 'read in ', len(dataset), 'samples'
-	print 'found a total of', len(frequencies), 'words'
+	print('read in ', len(dataset), 'samples')
+	print('found a total of', len(frequencies), 'words')
 
 	# add transposition errors
 	parsed_data = generate_errors(dataset, frequencies)
@@ -171,20 +173,59 @@ def get_batches(data, batch_size):
 	return batches
 
 
+def clean(sentence):
+	res = list()
+	for word in sentence:
+		res.append(word.strip())
+	return res
+
+
+def parse_str(line):
+	split = line.split('|')
+	i = split[0]
+	o = split[1]
+	inp = clean(i.split(','))
+	outp = clean(o.split(','))
+
+	return (inp, outp)
+
+
+def load_from_file():
+	t = open('train.txt', 'r')
+	train = list()
+	for line in t:
+		train.append(parse_str(line))
+	t.close()
+
+	t = open('test.txt', 'r')
+	test = list()
+	for line in t:
+		test.append(parse_str(line))
+	t.close()
+
+	w = open('word2id.txt', 'r')
+	word_to_id = dict()
+	for line in w:
+		split = line.split(':')
+		word_to_id[split[0].strip()] = int(split[1])
+
+	return train, test, word_to_id
+
+
 def GRU(inputs, state, input_size, state_size):
 	with tf.variable_scope('GRU'):
-		W_r = tf.get_variable("W_r", shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		U_r = tf.get_variable("U_r", shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		b_r = tf.get_variable("b_r", shape=[state_size,], initializer = tf.constant_initializer(0.0))
+		W_r = tf.get_variable('W_r', shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
+		U_r = tf.get_variable('U_r', shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
+		b_r = tf.get_variable('b_r', shape=[state_size,], initializer = tf.constant_initializer(0.0))
 
 
-		W_z = tf.get_variable("W_z", shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		U_z = tf.get_variable("U_z", shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		b_z = tf.get_variable("b_z", shape=[state_size,], initializer = tf.constant_initializer(0.0))
+		W_z = tf.get_variable('W_z', shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
+		U_z = tf.get_variable('U_z', shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
+		b_z = tf.get_variable('b_z', shape=[state_size,], initializer = tf.constant_initializer(0.0))
 
-		W_o = tf.get_variable("W_o", shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		U_o = tf.get_variable("U_o", shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		b_o = tf.get_variable("b_o", shape=[state_size,], initializer = tf.constant_initializer(0.0))
+		W_o = tf.get_variable('W_o', shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
+		U_o = tf.get_variable('U_o', shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
+		b_o = tf.get_variable('b_o', shape=[state_size,], initializer = tf.constant_initializer(0.0))
 
 		z_t = tf.nn.sigmoid(tf.matmul(inputs, U_z) + tf.matmul(state, W_z) + b_z)
 		r_t = tf.nn.sigmoid(tf.matmul(inputs, U_r) + tf.matmul(state, W_r) + b_r)
