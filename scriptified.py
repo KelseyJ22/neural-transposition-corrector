@@ -42,7 +42,7 @@ def create_embedding(word):
 	return embedding
 
 
-def load_embeddings(inputs, labels):
+def load_embeddings(config, inputs, labels):
 	embedded = list()
 	parsed_labels = list()
 	for i in range(0, len(inputs)):
@@ -54,13 +54,11 @@ def load_embeddings(inputs, labels):
 			embedded[i].append(list())
 			embedded[i][j] = create_embedding(word)
 
-	for i in range(0, len(labels)):
-	# parsed_labels will be of shape [batch_size, max_sentence_length, 1]
+	parsed_labels = np.zeros((config.batch_size, config.max_sentence_len))
+	for i in range(0, config.batch_size):
 		sentence = labels[i]
-		parsed_labels.append(list())
-		for j in  range(0, len(sentence)):
+		for j in  range(0, config.max_sentence_len):
 			word = sentence[j]
-			parsed_labels[i].append(list())
 			parsed_labels[i][j] = word_to_id[word]
 
 	return np.asarray(embedded), np.asarray(parsed_labels)
@@ -89,27 +87,6 @@ with tf.Graph().as_default():
 	data = tf.placeholder(tf.float32, shape=(None, config.max_sentence_len, config.embedding_size), name='data')
 	labels = tf.placeholder(tf.int32, shape=(None, config.max_sentence_len), name='labels')
 
-	#cell = tf.contrib.rnn.BasicLSTMCell(config.hidden_size, forget_bias=0.0, state_is_tuple=True)
-	#multi_cell = tf.nn.rnn_cell.MultiRNNCell([cell] * config.num_layers, state_is_tuple=True)
-
-	"""outputs = list()
-	with tf.variable_scope('RNN'):
-		for time_step in range(config.max_sentence_len):
-			if time_step > 0:
-				tf.get_variable_scope().reuse_variables()
-			(cell_output, state) = multi_cell(data[:, time_step, :], state)
-			outputs.append(cell_output)"""
-
-	#inputs = tf.unstack(data, num=config.num_layers, axis=1)
-
-	#outputs, state = tf.nn.static_rnn(multi_cell, inputs, initial_state=rnn_tuple_state)
-	"""lstm_cell = tf.nn.rnn_cell.DropoutWrapper(cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=config.hidden_size), output_keep_prob=config.keep_prob)
-
-	with tf.name_scope('lstm'):
-		cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * config.num_layers)
-		initial_state = cell.zero_state(batch_size=config.batch_size, dtype=tf.float32)
-		outputs, final_state = tf.nn.dynamic_rnn(cell=cell, inputs=data, initial_state=initial_state)"""
-
 
 	U = tf.get_variable("U", shape=[config.hidden_size, config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
 	b2 = tf.get_variable("b2", shape=[config.vocab_size,], initializer = tf.constant_initializer(0))
@@ -125,12 +102,6 @@ with tf.Graph().as_default():
 			o_drop_t = tf.nn.dropout(o_t, config.keep_prob)
 			y_t = tf.matmul(o_drop_t, U) + b2
 			preds.append(y_t)
-
-	"""with tf.variable_scope('softmax'):
-		W = tf.get_variable('W', [config.embedding_size, config.vocab_size], initializer=tf.xavier_initializer())
-		b = tf.get_variable('b', [config.vocab_size], initializer=tf.constant_initializer(0.0))
-
-	preds = [tf.matmul(output, W) + b for output in outputs]"""
 
 	loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=preds)
 	loss = tf.reduce_mean(loss_vector)
@@ -156,19 +127,18 @@ with tf.Graph().as_default():
 			start_time = datetime.datetime.now()
 			for batch in tqdm(batches):
 
-				embedded, one_hot_labels = load_embeddings(batch[0], batch[1])
-				print 'this batch shapes:', embedded.shape, one_hot_labels.shape
+				embedded, one_hot_labels = load_embeddings(config, batch[0], batch[1])
 				feed = {data: embedded, labels: one_hot_labels}
-				_, loss = sess.run([opt, loss], feed_dict=feed)
+				_, curr_loss = sess.run((opt, loss), feed_dict=feed)
 
-				summary = tf.summary.scalar('loss', loss) # for logging
-				writer.add_summary(summary, config.global_step)
+				#summary = tf.summary.scalar('loss', loss) # for logging
+				#writer.add_summary(summary, config.global_step)
 				config.global_step += 1
 
 				# training status
 				if config.global_step % config.print_interval == 0:
-					perplexity = math.exp(float(loss)) if loss < 300 else float('inf')
-					tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (config.global_step, loss, perplexity))
+					perplexity = math.exp(float(curr_loss)) if curr_loss < 300 else float('inf')
+					tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (config.global_step, curr_loss, perplexity))
 					# run test periodically
 					#feed = create_feed_dict(embedded)
 					#predictions = sess.run(tf.argmax(pred, axis=1), feed_dict=feed)
