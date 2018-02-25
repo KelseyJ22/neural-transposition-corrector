@@ -13,11 +13,8 @@ def load_word_lookup(frequencies):
 					lookups[word] = current_count
 					current_count += 1
 
-	# map all non-word characters to 0
-	lookups['<s>'] = 0
-	lookups['</s>'] = 0
-	lookups['<UNK>'] = 0
-	lookups['0'] = 0
+	lookups['<UNK>'] = 2000
+	lookups['0'] = 2001
 	return lookups
 	
 

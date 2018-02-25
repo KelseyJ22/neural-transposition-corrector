@@ -11,7 +11,7 @@ class Config:
 		self.character_set = 'abcdefghijklmnopqrstuvwxyz' # only dealing with lowercase alphabetic characters
 		self.hidden_size = 512
 		self.max_sentence_len = 10
-		self.vocab_size = 2000
+		self.vocab_size = 2002
 		self.lr = 0.001
 		self.charset_size = len(self.character_set)
 		self.embedding_size = 3 * self.charset_size
