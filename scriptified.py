@@ -25,6 +25,32 @@ class Config:
 		self.print_interval = 100
 		self.keep_prob = 0.9
 
+def evaluate(preds, id_to_word, labels):
+	preds = np.asarray(preds) # 10 x 100 x 2000 matrix
+	words = np.argmax(preds, axis=2)
+
+	pred_sentences = list()
+	for i in range(0, len(words[0])):
+		sent = list()
+		for j in range(0, len(words)):
+			word_id = words[j][i]
+			word = id_to_word[word_id]
+			sent.append(word)
+		pred_sentences.append(sent)
+
+	label_sentences = list()
+	for i in range(0, len(labels)):
+		sent = list()
+		for j in range(0, len(labels[0])):
+			word_id = labels[i][j]
+			word = id_to_word[word_id]
+			sent.append(word)
+		label_sentences.append(sent)
+
+	assert len(pred_sentences) == len(label_sentences)
+	for i in range(0, len(label_sentences)):
+		print pred_sentences[i], label_sentences[i]
+
 
 def create_embedding(word):
 	first = config.character_set.find(word[0])
@@ -90,7 +116,7 @@ with tf.Graph().as_default():
 
 	opt = tf.train.AdamOptimizer(config.lr).minimize(loss)
 
-	train, test, word_to_id = utils.load_from_file()
+	train, test, word_to_id, id_to_word = utils.load_from_file()
 
 	writer = tf.summary.FileWriter(config.model_dir)
 	merged_summaries = tf.summary.merge_all()
@@ -112,8 +138,6 @@ with tf.Graph().as_default():
 				feed = {data: embedded, labels: one_hot_labels}
 				_, curr_loss = sess.run((opt, loss), feed_dict=feed)
 
-				#summary = tf.summary.scalar('loss', loss) # for logging
-				#writer.add_summary(summary, config.global_step)
 				config.global_step += 1
 
 				# training status
@@ -122,17 +146,17 @@ with tf.Graph().as_default():
 					tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (config.global_step, curr_loss, perplexity))
 					if perplexity < best_perplexity:
 						print('New best model! Saving...')
-						name = config.model_dir + '/' + str(config.global_step)
+						name = config.model_dir + '/' + str(config.global_step) + '_' + str(perplexity)
 						saver = tf.train.Saver()
 						saver.save(sess, name)
 						print('Save complete with name', name)
 					# run test periodically
-					#feed = create_feed_dict(embedded)
-					#predictions = sess.run(tf.argmax(pred, axis=1), feed_dict=feed)
+					predictions = sess.run(preds, feed_dict=feed)
+					evaluate(predictions, id_to_word, one_hot_labels)
 
 
 			end_time = datetime.datetime.now()
-			print('Epoch finished in ', end_time - start_time, 'ms')
+			print('Epoch finished in ', str(end_time - start_time), 'ms')
 				
 
 

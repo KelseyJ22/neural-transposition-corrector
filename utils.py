@@ -5,8 +5,6 @@ import re
 import tensorflow as tf
 import pickle
 
-start = '<s>'
-end = '</s>'
 pad = '0'
 max_length = 10
 unknown = '<UNK>'
@@ -153,11 +151,11 @@ def batchify(data, batch_size):
 	labels = list()
 	for i in range(0, len(data)):
 		sample = data[i]
-		inputs.append(list(reversed(sample[0])))
-		labels.append([start] + sample[1] + [end])
+		inputs.append(list(sample[0]))
+		labels.append(sample[1])
 
-		inputs[i] = [pad] * (max_length - len(inputs[i])) + inputs[i] # left padding
-		labels[i] = labels[i] + [pad] * (max_length - len(labels[i])) # right padding
+		inputs[i] = inputs[i] + [pad] * (max_length - len(inputs[i]))
+		labels[i] = labels[i] + [pad] * (max_length - len(labels[i]))
 	return (inputs, labels)
 
 
@@ -193,24 +191,6 @@ def parse_str(line):
 
 
 def load_from_file():
-	"""t = open('train.txt', 'r')
-	train = list()
-	for line in t:
-		train.append(parse_str(line))
-	t.close()
-
-	t = open('test.txt', 'r')
-	test = list()
-	for line in t:
-		test.append(parse_str(line))
-	t.close()
-
-	w = open('word2id.txt', 'r')
-	word_to_id = dict()
-	for line in w:
-		split = line.split(':')
-		word_to_id[split[0].strip()] = int(split[1])"""
-
 	test_file = 'test'
 	test_file_obj = open(test_file, 'r')
 	test = pickle.load(test_file_obj)
@@ -226,7 +206,11 @@ def load_from_file():
 	word_to_id = pickle.load(word2id_file_obj)
 	word2id_file_obj.close()
 
-	return train, test, word_to_id
+	id_to_word = dict()
+	for word in word_to_id:
+		id_to_word[word_to_id[word]] = word
+
+	return train, test, word_to_id, id_to_word
 
 
 def GRU(inputs, state, input_size, state_size):
