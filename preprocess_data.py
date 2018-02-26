@@ -22,17 +22,17 @@ train, test, frequencies = utils.load_data('Data/movie_lines.txt')
 
 word_to_id = load_word_lookup(frequencies)
 
-test_file = 'test'
+test_file = 'Data/test'
 test_file_obj = open(test_file, 'wb')
 pickle.dump(test, test_file_obj)
 test_file_obj.close()
 
-train_file = 'train'
+train_file = 'Data/train'
 train_file_obj = open(train_file, 'wb')
 pickle.dump(train, train_file_obj)
 train_file_obj.close()
 
-word2id_file = 'word2id'
+word2id_file = 'Data/word2id'
 word2id_file_obj = open(word2id_file, 'wb')
 pickle.dump(word_to_id, word2id_file_obj)
 word2id_file_obj.close()

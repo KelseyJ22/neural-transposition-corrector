@@ -25,11 +25,40 @@ class Config:
 		self.print_interval = 100
 		self.keep_prob = 0.9
 
+
 def evaluate(preds, id_to_word, labels):
 	preds = np.asarray(preds) # 10 x 100 x 2000 matrix
-	words = np.argmax(preds, axis=2)
+	print preds.shape, labels.shape
+	pred0 = list()
+	for i in range(0, 10):
+		pred0.append(np.argmax(np.exp(preds[0][i]) / np.sum(np.exp(preds[0][i]), axis=0))[:-1])
 
-	pred_sentences = list()
+	pred1 = list()
+	for i in range(0, 10):
+		pred1.append(np.argmax(np.exp(preds[1][i]) / np.sum(np.exp(preds[1][i]), axis=0))[:-1])
+
+	pred2 = list()
+	for i in range(0, 10):
+		pred2.append(np.argmax(np.exp(preds[2][i]) / np.sum(np.exp(preds[2][i]), axis=0))[:-1])
+
+	pred3 = list()
+	for i in range(0, 10):
+		pred3.append(np.argmax(np.exp(preds[3][i]) / np.sum(np.exp(preds[3][i]), axis=0))[:-1])
+
+	pred4 = list()
+	for i in range(0, 10):
+		pred4.append(np.argmax(np.exp(preds[4][i]) / np.sum(np.exp(preds[4][i]), axis=0))[:-1])
+
+	print pred0, labels[0]
+	print pred1, labels[1]
+	print pred2, labels[2]
+	print pred3, labels[3]
+	print pred4, labels[4]
+
+	#words = np.argmax(preds, axis=2)
+	#print words
+
+	"""pred_sentences = list()
 	for i in range(0, len(words[0])):
 		sent = list()
 		for j in range(0, len(words)):
@@ -49,7 +78,7 @@ def evaluate(preds, id_to_word, labels):
 
 	assert len(pred_sentences) == len(label_sentences)
 	for i in range(0, len(label_sentences)):
-		print pred_sentences[i], label_sentences[i]
+		print pred_sentences[i], label_sentences[i]"""
 
 
 def create_embedding(word):

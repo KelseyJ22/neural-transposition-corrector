@@ -22,8 +22,6 @@ def parse(line):
 		for word in words:
 			sent.append(word.strip().lower())
 
-		if len(sent) > max_length: # don't want super long sentences
-			sent = sent[:max_length]
 		parsed.append(sent)
 	return parsed
 
@@ -112,8 +110,8 @@ def generate_errors(data, frequencies):
 					cleaned_sentence.append(unknown)
 					new_sentence.append(unknown)
 
-		if len(new_sentence) > 0:
-			errored.append((new_sentence, cleaned_sentence)) # input, output pair
+		if len(new_sentence) >= 10:
+			errored.append((new_sentence[:10], cleaned_sentence[:10])) # input, output pair
 	return errored
 
 
@@ -125,14 +123,16 @@ def load_data(fname):
 	for line in data.readlines():
 		text_data = parse(line)
 		for sentence in text_data:
-			dataset.append(sentence)
-			for word in sentence:
-				w = clean(word)
-				if len(w) > 0:
-					if w in frequencies:
-						frequencies[w] += 1
-					else:
-						frequencies[w] = 1
+			if len(sentence) > 10:
+				dataset.append(sentence)
+
+				for word in sentence:
+					w = clean(word)
+					if len(w) > 0:
+						if w in frequencies:
+							frequencies[w] += 1
+						else:
+							frequencies[w] = 1
 
 	print('read in ', len(dataset), 'samples')
 	print('found a total of', len(frequencies), 'words')
@@ -142,6 +142,7 @@ def load_data(fname):
 
 	# train/test split
 	train, test = parsed_data[0:100000], parsed_data[100000:110000]
+
 	
 	return train, test, frequencies
 
@@ -154,8 +155,8 @@ def batchify(data, batch_size):
 		inputs.append(list(sample[0]))
 		labels.append(sample[1])
 
-		inputs[i] = inputs[i] + [pad] * (max_length - len(inputs[i]))
-		labels[i] = labels[i] + [pad] * (max_length - len(labels[i]))
+		#inputs[i] = inputs[i] + [pad] * (max_length - len(inputs[i]))
+		#labels[i] = labels[i] + [pad] * (max_length - len(labels[i]))
 	return (inputs, labels)
 
 
@@ -191,17 +192,17 @@ def parse_str(line):
 
 
 def load_from_file():
-	test_file = 'test'
+	test_file = 'Data/test'
 	test_file_obj = open(test_file, 'r')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
 
-	train_file = 'train'
+	train_file = 'Data/train'
 	train_file_obj = open(train_file, 'r')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 
-	word2id_file = 'word2id'
+	word2id_file = 'Data/word2id'
 	word2id_file_obj = open(word2id_file, 'r')
 	word_to_id = pickle.load(word2id_file_obj)
 	word2id_file_obj.close()
