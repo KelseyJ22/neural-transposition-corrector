@@ -12,7 +12,6 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 
-from util import print_sentence, write_conll, read_conll
 from data_util import load_and_preprocess_data, load_embeddings, ModelHelper
 from updated import UpdatedModel
 from defs import LBLS
@@ -23,13 +22,13 @@ logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config:
-    n_word_features = 2
-    window_size = 1
-    n_features = (2 * window_size + 1) * n_word_features
-    max_length = 120
-    n_classes = 5
+    max_sentence_length = 10
+    vocab_size = 2002
+    n_classes = vocab_size
     dropout = 0.5
-    embed_size = 50
+    characters = 'abcdefghijklmnopqrstuvwxyz'
+    charset_size = len(characters)
+    embed_size = 3 * charset_size
     hidden_size = 300
     batch_size = 32
     n_epochs = 10
@@ -50,7 +49,7 @@ class Config:
         self.log_output = self.output_path + 'log'
 
 
-def pad_sequences(data, max_length):
+def pad_sequences(data):
     """Ensures each input-output seqeunce pair in @data is of length
     @max_length by padding it with zeros and truncating the rest of the
     sequence.
@@ -65,7 +64,7 @@ def pad_sequences(data, max_length):
     """
     ret = []
 
-    zero_vector = [0] * Config.n_features
+    zero_vector = [0]
     zero_label = 4 # corresponds to the 'O' tag
 
     for sentence, labels in data:
@@ -74,7 +73,7 @@ def pad_sequences(data, max_length):
         mask = list()
         i = 0
 
-        while len(new_sentence) < max_length:
+        while len(new_sentence) < Config.max_sentence_length:
             if i < len(sentence): # still in the sentence
                 new_sentence.append(sentence[i])
                 new_labels.append(labels[i])                
@@ -91,9 +90,9 @@ def pad_sequences(data, max_length):
 
 class RNNModel(UpdatedModel):
     def add_placeholders(self):
-        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_length, self.config.n_features))
-        self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_length))
-        self.mask_placeholder = tf.placeholder(tf.bool, shape=(None, self.config.max_length))
+        self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
+        self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
+        self.mask_placeholder = tf.placeholder(tf.bool, shape=(None, self.config.max_sentence_length))
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
 
@@ -116,6 +115,7 @@ class RNNModel(UpdatedModel):
         Returns:
             embeddings: tf.Tensor of shape (None, n_features*embed_size)
         """
+        # TODO: make this work with my version of embeddings!
         e1 = tf.Variable(self.pretrained_embeddings)
         e2 = tf.nn.embedding_lookup(e1, self.input_placeholder)
         embeddings = tf.reshape(e2, [-1, self.config.max_length, self.config.n_features*self.config.embed_size])
@@ -139,7 +139,7 @@ class RNNModel(UpdatedModel):
         h_t = tf.zeros([tf.shape(x)[0], self.config.hidden_size])
 
         with tf.variable_scope('RNN'):
-            for time_step in range(self.config.max_length):
+            for time_step in range(self.config.max_sentence_length):
                 if time_step > 0:
                     tf.get_variable_scope().reuse_variables()
 
@@ -148,7 +148,7 @@ class RNNModel(UpdatedModel):
                 y_t = tf.matmul(o_drop_t, U) + b2
                 preds.append(y_t)
 
-        preds = tf.pack(preds, 1)
+        preds = tf.pack(preds, 1) # TODO: read up on what this does
 
         assert preds.get_shape().as_list() == [None, self.max_length, self.config.n_classes], 'predictions are not of the right shape. Expected {}, got {}'.format([None, self.max_length, self.config.n_classes], preds.get_shape().as_list())
         return preds
@@ -180,9 +180,9 @@ class RNNModel(UpdatedModel):
 
 
     def preprocess_sequence_data(self, examples):
-        def featurize_windows(data, start, end, window_size = 1):
-            """Uses the input sequences in @data to construct new windowed data points.
-            """
+        # TODO what should this do?
+        """ def featurize_windows(data, start, end, window_size = 1):
+            # Uses the input sequences in @data to construct new windowed data points.
             ret = []
             for sentence, labels in data:
                 from util import window_iterator
@@ -193,12 +193,12 @@ class RNNModel(UpdatedModel):
             return ret
 
         examples = featurize_windows(examples, self.helper.START, self.helper.END)
-        return pad_sequences(examples, self.max_length)
+        return pad_sequences(examples, self.max_length)"""
 
 
     def consolidate_predictions(self, examples_raw, examples, preds):
-        """Batch the predictions into groups of sentence length.
-        """
+        # Batch the predictions into groups of sentence length.
+        # TODO: what are should this do?
         assert len(examples_raw) == len(examples)
         assert len(examples_raw) == len(preds)
 
@@ -213,7 +213,7 @@ class RNNModel(UpdatedModel):
 
     def predict_on_batch(self, sess, inputs_batch, mask_batch):
         feed = self.create_feed_dict(inputs_batch=inputs_batch, mask_batch=mask_batch)
-        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed)
+        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed) # TODO: why axis=2?
         return predictions
 
 
@@ -225,8 +225,6 @@ class RNNModel(UpdatedModel):
 
     def __init__(self, helper, config, pretrained_embeddings, report=None):
         super(RNNModel, self).__init__(helper, config, report)
-        self.max_length = min(Config.max_length, helper.max_length)
-        Config.max_length = self.max_length
         self.pretrained_embeddings = pretrained_embeddings
 
         self.input_placeholder = None
@@ -239,10 +237,10 @@ class RNNModel(UpdatedModel):
 
 def train(args):
     config = Config(args)
+    # TODO: what is helper?
     helper, train, dev, train_raw, dev_raw = load_and_preprocess_data(args)
-    embeddings = load_embeddings(args, helper)
-    config.embed_size = embeddings.shape[1]
     helper.save(config.output_path)
+    train, test, word_to_id, id_to_word = utils.load_from_file()
 
     handler = logging.FileHandler(config.log_output)
     handler.setLevel(logging.DEBUG)
@@ -254,7 +252,7 @@ def train(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(helper, config, embeddings)
+        model = RNNModel(helper, config)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()
@@ -264,11 +262,12 @@ def train(args):
             session.run(init)
             model.fit(session, saver, train, dev)
             if report:
-                report.log_output(model.output(session, dev_raw))
+                report.log_output(model.output(session, dev_raw)) # TODO: how are dev_raw and dev different?
                 report.save()
             else:
                 output = model.output(session, dev_raw)
                 sentences, labels, predictions = zip(*output)
+                # TODO: what is LBLS?
                 predictions = [[LBLS[l] for l in preds] for preds in predictions]
                 output = zip(sentences, labels, predictions)
 
@@ -282,14 +281,12 @@ def train(args):
 def evaluate(args):
     config = Config(args.model_path)
     helper = ModelHelper.load(args.model_path)
-    input_data = read_conll(args.data)
-    embeddings = load_embeddings(args, helper)
-    config.embed_size = embeddings.shape[1]
-
+    train, test, word_to_id, id_to_word = utils.load_from_file()
+   
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(helper, config, embeddings)
+        model = RNNModel(helper, config)
 
         logger.info('took %.2f seconds', time.time() - start)
 
@@ -299,7 +296,7 @@ def evaluate(args):
         with tf.Session() as session:
             session.run(init)
             saver.restore(session, model.config.model_output)
-            for sentence, labels, predictions in model.output(session, input_data):
+            for sentence, labels, predictions in model.output(session, train):
                 predictions = [LBLS[l] for l in predictions]
                 print_sentence(args.output, sentence, labels, predictions)
 
@@ -307,13 +304,12 @@ def evaluate(args):
 def shell(args):
     config = Config(args.model_path)
     helper = ModelHelper.load(args.model_path)
-    embeddings = load_embeddings(args, helper)
-    config.embed_size = embeddings.shape[1]
+    train, test, word_to_id, id_to_word = utils.load_from_file()
 
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(helper, config, embeddings)
+        model = RNNModel(helper, config)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()
