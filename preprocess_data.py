@@ -4,23 +4,31 @@ import pickle
 
 
 def load_word_lookup(frequencies):
-	lookups = dict()
+	word_to_id = dict()
+	id_to_word = dict()
+	embeddings = list()
 	current_count = 0
 	for word in frequencies:
 		if frequencies[word] > 80:
 			if len(word) > 0:
-				if word not in lookups:
-					lookups[word] = current_count
+				if word not in word_to_id:
+					word_to_id[word] = current_count
+					id_to_word[current_count] = word
 					current_count += 1
+					embeddings.append(utils.create_embedding(word))
 
-	lookups['<UNK>'] = 2000
-	lookups['0'] = 2001
-	return lookups
+	word_to_id['<UNK>'] = 2000
+	word_to_id['0'] = 2001
+	id_to_word[2000] = '<UNK>'
+	id_to_word[2001] = '0'
+	embeddings[2000] = np.zeros((78))
+	embeddings[2001] = np.zeros((78))
+	return word_to_id, id_to_word, embeddings
 	
 
 train, test, frequencies = utils.load_data('Data/movie_lines.txt')
 
-word_to_id = load_word_lookup(frequencies)
+word_to_id, id_to_word, embeddings = load_word_lookup(frequencies)
 
 test_file = 'Data/test'
 test_file_obj = open(test_file, 'wb')
@@ -36,3 +44,13 @@ word2id_file = 'Data/word2id'
 word2id_file_obj = open(word2id_file, 'wb')
 pickle.dump(word_to_id, word2id_file_obj)
 word2id_file_obj.close()
+
+id2word_file = 'Data/id2word'
+id2word_file_obj = open(id2word_file, 'wb')
+pickle.dump(word_to_id, id2word_file_obj)
+id2word_file_obj.close()
+
+embed_file = 'Data/embeddings'
+embed_file_obj = open(embed_file, 'wb')
+pickle.dump(word_to_id, embed_file_obj)
+embed_file_obj.close()

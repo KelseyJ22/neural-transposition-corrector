@@ -11,16 +11,19 @@ unknown = '<UNK>'
 
 
 def create_embedding(word):
-	first = config.character_set.find(word[0])
-	last = config.character_set.find(word[-1])
+	character_set = 'abcdefghijklmnopqrstuvwxyz'
+	charset_size = len(character_set)
+
+	first = character_set.find(word[0])
+	last = character_set.find(word[-1])
 	bow = list()
 	for i in range(1, len(word)-1):
-		bow.append(config.character_set.find(word[i]))
-	embedding = np.zeros((3 * config.charset_size))
+		bow.append(character_set.find(word[i]))
+	embedding = np.zeros((3 * charset_size))
 	embedding[first] = 1
 	for char in bow:
-		embedding[config.charset_size + char] = 1
-	embedding[config.charset_size * 2 + last] = 1
+		embedding[charset_size + char] = 1
+	embedding[charset_size * 2 + last] = 1
 	return embedding
 
 
@@ -169,19 +172,19 @@ def pad_sequences(data):
 
 		i = 0
 		while len(new_sentence) < max_length:
-		    if i < len(sentence): # still in the sentence
-		        new_sentence.append(sentence[i])
-		        new_labels.append(labels[i])                
-		        mask.append(True)
-		    else: # pad with zeros
-		        new_sentence.append('0')
-		        new_labels.append(2001)
-		        mask.append(False)
-		    i += 1
+			if i < len(sentence): # still in the sentence
+				new_sentence.append(sentence[i])
+				new_labels.append(labels[i])                
+				mask.append(True)
+			else: # pad with zeros
+				new_sentence.append('0')
+				new_labels.append(2001)
+				mask.append(False)
+			i += 1
 
 		ret.append((new_sentence, new_labels, mask))
 
-    return ret
+	return ret
 
 
 def batchify(data, batch_size):
@@ -219,9 +222,9 @@ def clean_sentence(sentence):
 
 def save(path, map1, map2):
 	if not os.path.exists(path):
-        os.makedirs(path)
+		os.makedirs(path)
 	with open(os.path.join(path, '.pkl'), 'w') as f:
-        pickle.dump([map1, map2], f)
+		pickle.dump([map1, map2], f)
 
 
 def parse_str(line):

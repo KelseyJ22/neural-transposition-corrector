@@ -73,14 +73,6 @@ class RNNModel(UpdatedModel):
         Returns:
             embeddings: numpy array of shape (None, config.max_sentence_length, config.embedding_size)
         """
-        """batch = self.input_placeholder
-        for i in range(batch.get_shape().as_list()[0]):
-            sentence = batch[i]
-            sent_list = list()
-            for word in sentence:
-                sent_list.append(utils.create_embedding(self.config.id_to_word[word]))
-            embeddings.append(np.asarray(sent_list))
-        return np.asarray(embeddings)"""
         L = tf.Variable(self.pretrained_embeddings)
         lookups = tf.nn.embedding_lookup(L, self.input_placeholder)
         embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.embedding_size])
@@ -273,7 +265,7 @@ def shell(args):
     train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
-    
+
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
