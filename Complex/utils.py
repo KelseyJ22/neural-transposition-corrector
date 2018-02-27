@@ -4,6 +4,7 @@ import random
 import re
 import tensorflow as tf
 import pickle
+import os
 
 pad = '0'
 max_length = 10
@@ -181,7 +182,7 @@ def pad_sequences(data):
 
 		ret.append((new_sentence, new_labels, mask))
 
-    return ret
+	return ret
 
 
 def batchify(data, batch_size):
@@ -219,9 +220,9 @@ def clean_sentence(sentence):
 
 def save(path, map1, map2):
 	if not os.path.exists(path):
-        os.makedirs(path)
+		os.makedirs(path)
 	with open(os.path.join(path, '.pkl'), 'w') as f:
-        pickle.dump([map1, map2], f)
+ 		pickle.dump([map1, map2], f)
 
 
 def parse_str(line):
@@ -235,26 +236,32 @@ def parse_str(line):
 
 
 def load_from_file():
-	test_file = 'Data/test'
+	test_file = '../Data/test'
 	test_file_obj = open(test_file, 'r')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
 
-	train_file = 'Data/train'
+	train_file = '../Data/train'
 	train_file_obj = open(train_file, 'r')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 
-	word2id_file = 'Data/word2id'
+	word2id_file = '../Data/word2id'
 	word2id_file_obj = open(word2id_file, 'r')
 	word_to_id = pickle.load(word2id_file_obj)
 	word2id_file_obj.close()
 
+	embeddings_temp = dict()
 	id_to_word = dict()
 	for word in word_to_id:
 		id_to_word[word_to_id[word]] = word
+		embeddings_temp[word_to_id[word]] = create_embedding(word)
 
-	return train, test, word_to_id, id_to_word
+	embeddings = list()
+	for i in range(0, 2002):
+		embeddings.append(embeddings_temp[i])
+
+	return train, test, word_to_id, id_to_word, np.asarray(embeddings)
 
 
 def GRU(inputs, state, input_size, state_size):
