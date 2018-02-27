@@ -22,7 +22,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Config:
     max_sentence_length = 10
-    vocab_size = 2002
+    vocab_size = 2393
     n_classes = vocab_size
     dropout = 0.5
     characters = 'abcdefghijklmnopqrstuvwxyz'
@@ -85,7 +85,7 @@ class RNNModel(UpdatedModel):
         Returns:
             pred: tf.Tensor of shape (batch_size, max_length, n_classes)
         """
-        x = self.add_embedding()
+        x = tf.cast(self.add_embedding(), tf.float32)
       
         cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
 
@@ -104,7 +104,7 @@ class RNNModel(UpdatedModel):
                 y_t = tf.matmul(o_drop_t, U) + b2
                 preds.append(y_t)
 
-        preds = tf.stack(preds, 1) # TODO: read up on what this does
+        preds = tf.stack(preds, 1) # converts from list to tensor
 
         assert preds.get_shape().as_list() == [None, self.config.max_sentence_length, self.config.n_classes], 'predictions are not of the right shape. Expected {}, got {}'.format([None, self.max_length, self.config.n_classes], preds.get_shape().as_list())
         return preds
@@ -118,7 +118,7 @@ class RNNModel(UpdatedModel):
         Returns:
             loss: A 0-d tensor (scalar)
         """
-        loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(preds, self.labels_placeholder)
+        loss_vector = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels_placeholder, logits=preds)
         masked = tf.boolean_mask(loss_vector, self.mask_placeholder)
         loss = tf.reduce_mean(masked)
         return loss
@@ -137,20 +137,26 @@ class RNNModel(UpdatedModel):
 
     def preprocess_sequence_data(self, examples):
         x = list()
-        for sentence in examples[0]:
-            sent_list = list()
-            for word in sentence:
-                sent_list.append(self.word_to_id(word))
-            x.append(np.asarray(sent_list))
-
         y = list()
-        for sentence in examples[1]:
+        for sentence, labels in examples:
             sent_list = list()
-            for word in sentence:
-                sent_list.append(self.word_to_id(word))
-            y.append(np.asarray(sent_list))
+            label_list = list()
+            assert len(sentence) == len(labels)
 
-        return (utils.pad_sequence(np.asarray(x)), utils.pad_sequence(np.asarray(y)))
+            for i in range(0, len(sentence)):
+                #word = sentence[i]
+                label = labels[i]
+                # with current configuration of embedding using label for both works
+                # (will need to change if/when I try other embeddings)
+                sent_list.append(self.config.word_to_id[label])
+                label_list.append(self.config.word_to_id[label])
+
+            assert len(sent_list) == len(label_list)
+            if len(sent_list) > 0: # don't want any data to be [], []
+                x.append(np.asarray(sent_list))
+                y.append(np.asarray(label_list))
+
+        return (utils.pad_sequences(np.asarray(x), np.asarray(y)))
 
 
     def consolidate_predictions(self, examples, preds):
@@ -173,7 +179,7 @@ class RNNModel(UpdatedModel):
 
 
     def train_on_batch(self, sess, inputs_batch, labels_batch, mask_batch):
-        feed = self.create_feed_dict(inputs_batch, labels_batch=labels_batch, mask_batch=mask_batch, dropout=Config.dropout)
+        feed = self.create_feed_dict(inputs_batch=inputs_batch, labels_batch=labels_batch, mask_batch=mask_batch, dropout=self.config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
 
@@ -191,7 +197,7 @@ class RNNModel(UpdatedModel):
         self.build()
 
 
-def lookup_words(predictions, id_to_word):
+def lookup_words(predictions):
     pass
 
 
@@ -228,7 +234,7 @@ def train(args):
             else:
                 output = model.output(session, dev_raw)
                 sentences, labels, predictions = zip(*output)
-                predictions = lookup_words(predictions, id_to_word)
+                predictions = lookup_words(predictions)
                 output = zip(sentences, labels, predictions)
 
                 with open('results.txt', 'w') as f:

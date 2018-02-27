@@ -8,8 +8,9 @@ import logging
 
 import tensorflow as tf
 from model import Model
-import tqdm
+from tqdm import tqdm
 import utils
+import time
 
 logger = logging.getLogger('final')
 logger.setLevel(logging.DEBUG)
@@ -64,7 +65,7 @@ class UpdatedModel(Model):
         global train_loss
         total = 0
         seen = 0
-        batches = utils.get_batches(train, config.batch_size)
+        batches = utils.get_batches(train_examples, self.config.batch_size)
         for batch in tqdm(batches):
             loss = self.train_on_batch(sess, *batch)
             total += loss
@@ -74,12 +75,11 @@ class UpdatedModel(Model):
         train_loss.append(float(total/seen))
         print("")
 
-        logger.info('Evaluating on development data')
+        #logger.info('Evaluating on development data')
         #_ = self.evaluate(sess, dev_set)
     
-
-        f1 = entity_scores[-1]
-        return f1
+        #f1 = entity_scores[-1]
+        return train_loss[-1]
 
 
     def output(self, sess, inputs):
@@ -87,7 +87,7 @@ class UpdatedModel(Model):
         Reports the output of the model on examples (uses helper to featurize each example).
         """
         preds = []
-        batches = utils.get_batches(train, config.batch_size)
+        batches = utils.get_batches(train, self.config.batch_size)
 
         for batch in tqdm(batches):
             batch = batch[:1] + batch[2:]

@@ -52,16 +52,6 @@ def vectorize(input_list):
 	return res
 
 
-def load_embeddings():
-	vecs = open('Data/wordVectors.txt', 'r').readlines()
-	vocab = open('Data/vocab.txt', 'r').readlines()
-	assert len(vecs) == len(vocab)
-	print('read in ', len(vocab), 'words and wordvectors')
-	all_vocab = dict()
-	for i in range(0, len(vocab)):
-		all_vocab[vocab[i]] = vectorize(vecs[i])
-	return all_vocab
-
 
 def shuffle_string(string):
     chars = list(string)
@@ -163,10 +153,14 @@ def load_data(fname):
 	return train, test, frequencies
 
 
-def pad_sequences(data):
-	ret = []
+def pad_sequences(x, y):
+	assert x.shape == y.shape
 
-	for sentence, labels in data:
+	ret = list()
+	for i in range(0, x.shape[0]):
+		sentence = x[i]
+		labels = y[i]
+
 		new_sentence = list()
 		new_labels = list()
 		mask = list()
@@ -182,7 +176,7 @@ def pad_sequences(data):
 				new_labels.append(2001)
 				mask.append(False)
 			i += 1
-
+		
 		ret.append((new_sentence, new_labels, mask))
 	return ret
 
@@ -260,31 +254,7 @@ def load_from_file():
 		embeddings_temp[word_to_id[word]] = create_embedding(word)
 
 	embeddings = list()
-	for i in range(0, 2002):
+	for i in range(0, 2393):
 		embeddings.append(embeddings_temp[i])
 
 	return train, test, word_to_id, id_to_word, np.asarray(embeddings)
-
-
-def GRU(inputs, state, input_size, state_size):
-	with tf.variable_scope('GRU'):
-		W_r = tf.get_variable('W_r', shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		U_r = tf.get_variable('U_r', shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		b_r = tf.get_variable('b_r', shape=[state_size,], initializer = tf.constant_initializer(0.0))
-
-
-		W_z = tf.get_variable('W_z', shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		U_z = tf.get_variable('U_z', shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		b_z = tf.get_variable('b_z', shape=[state_size,], initializer = tf.constant_initializer(0.0))
-
-		W_o = tf.get_variable('W_o', shape=[state_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		U_o = tf.get_variable('U_o', shape=[input_size, state_size], initializer=tf.contrib.layers.xavier_initializer())
-		b_o = tf.get_variable('b_o', shape=[state_size,], initializer = tf.constant_initializer(0.0))
-
-		z_t = tf.nn.sigmoid(tf.matmul(inputs, U_z) + tf.matmul(state, W_z) + b_z)
-		r_t = tf.nn.sigmoid(tf.matmul(inputs, U_r) + tf.matmul(state, W_r) + b_r)
-		o_t = tf.nn.tanh(tf.matmul(inputs, U_o) + tf.matmul(r_t * state, W_o)+ b_o)
-		new_state = z_t * state + (1 - z_t) * o_t
-
-	output = new_state
-	return output, new_state

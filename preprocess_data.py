@@ -17,12 +17,12 @@ def load_word_lookup(frequencies):
 					current_count += 1
 					embeddings.append(utils.create_embedding(word))
 
-	word_to_id['<UNK>'] = 2000
-	word_to_id['0'] = 2001
-	id_to_word[2000] = '<UNK>'
-	id_to_word[2001] = '0'
-	embeddings[2000] = np.zeros((78))
-	embeddings[2001] = np.zeros((78))
+	word_to_id['<UNK>'] = current_count
+	word_to_id['0'] = current_count + 1
+	id_to_word[current_count] = '<UNK>'
+	id_to_word[current_count + 1] = '0'
+	embeddings.append(np.zeros((78))) # to correspond to UNK
+	embeddings.append(np.zeros((78))) # to correspond to 0
 	return word_to_id, id_to_word, embeddings
 	
 
