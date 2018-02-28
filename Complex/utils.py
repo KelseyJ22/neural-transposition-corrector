@@ -10,7 +10,6 @@ pad = '0'
 max_length = 10
 unknown = '<UNK>'
 
-
 def create_embedding(word):
 	character_set = 'abcdefghijklmnopqrstuvwxyz'
 	charset_size = len(character_set)
@@ -26,132 +25,7 @@ def create_embedding(word):
 		embedding[charset_size + char] = 1
 	embedding[charset_size * 2 + last] = 1
 	return embedding
-
-
-def parse(line):
-	parsed = list()
-	start = line.rfind('+')
-	if start != -1:
-		line = line[start+1:]
-	sentences = re.split('\.*\?*\!*', line) # split into sentences
-	for sentence in sentences: # want each sentence to be its own dataset
-		sent = list()
-		words = sentence.split(' ')
-		for word in words:
-			sent.append(word.strip().lower())
-
-		parsed.append(sent)
-	return parsed
-
-
-def vectorize(input_list):
-	listified = input_list.split(' ')
-	res = np.zeros([len(listified)-1]) # last element is '\n' and we don't want it
-	for i in range(0, len(listified)-1):
-		res[i] = float(listified[i])
-	return res
-
-
-
-def shuffle_string(string):
-    chars = list(string)
-    random.shuffle(chars)
-    return ''.join(chars)
-
-
-def add_error(word):
-	inner_chars = word[1:-1]
-	new_word = word[0] + shuffle_string(inner_chars) + word[-1]
-	return new_word
-
-
-def true_len(word):
-	count = 0
-	for char in word:
-		if char.isalpha():
-			count += 1
-	return count
-
-
-def is_transposable(word):
-	if true_len(word) > 3:
-		if true_len(word) < 8:
-			if word.isalpha():
-				return True
-	return False
-
-
-def clean(word):
-	word = word.strip().lower()
-	word = word.replace(',', '')
-	word = word.replace(';', '')
-	word = word.replace(':', '')
-	word = word.replace(')', '')
-	word = word.replace('(', '')
-	word = word.replace(']', '')
-	word = word.replace('[', '')
-	word = word.replace('-', '')
-	word = word.replace('<u>', '')
-	word = word.replace("\"", '')
-	return str(word)
-
-
-def generate_errors(data, frequencies):
-	errored = list()
-	for sentence in data:
-		cleaned_sentence = list()
-		new_sentence = list()
-		for word in sentence:
-			word = clean(word)
-			if len(word) > 0:
-				if word in frequencies and frequencies[word] > 80:
-					cleaned_sentence.append(word)
-					if is_transposable(word):
-						gen_error = random.randint(0, 3)
-						if gen_error == 0:
-							new_sentence.append(add_error(word))
-						else:
-							new_sentence.append(word)
-					else:
-						new_sentence.append(word)
-				else:
-					cleaned_sentence.append(unknown)
-					new_sentence.append(unknown)
-
-		errored.append((new_sentence[:10], cleaned_sentence[:10])) # input, output pair
-	return errored
-
-
-def load_data(fname):
-	frequencies = dict()
-	# read in data
-	data = open(fname, 'r')
-	dataset = list()
-	for line in data.readlines():
-		text_data = parse(line)
-		for sentence in text_data:
-			dataset.append(sentence)
-
-			for word in sentence:
-				w = clean(word)
-				if len(w) > 0:
-					if w in frequencies:
-						frequencies[w] += 1
-					else:
-						frequencies[w] = 1
-
-	print('read in ', len(dataset), 'samples')
-	print('found a total of', len(frequencies), 'words')
-
-	# add transposition errors
-	parsed_data = generate_errors(dataset, frequencies)
-
-	# train/test split
-	train, test = parsed_data[0:100000], parsed_data[100000:110000]
-
 	
-	return train, test, frequencies
-
 
 def pad_sequences(x, y):
 	assert x.shape == y.shape

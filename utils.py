@@ -156,8 +156,7 @@ def load_data(fname):
 	parsed_data = generate_errors(dataset, frequencies)
 
 	# train/test split
-	train, test = parsed_data[0:100000], parsed_data[100000:110000]
-
+	train, test = parsed_data[0:1000000], parsed_data[1000000:1010000]
 	
 	return train, test, frequencies
 

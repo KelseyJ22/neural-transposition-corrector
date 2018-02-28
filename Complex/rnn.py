@@ -30,7 +30,7 @@ class Config:
     embedding_size = 3 * charset_size
     hidden_size = 600
     batch_size = 32
-    n_epochs = 100
+    n_epochs = 40
     max_grad_norm = 10.
     lr = 0.001
     id_to_word = dict()
@@ -182,7 +182,6 @@ class RNNModel(UpdatedModel):
         return inputs, masks, preds
 
 
-
     def predict_on_batch(self, sess, inputs_batch, mask_batch):
         feed = self.create_feed_dict(inputs_batch=inputs_batch, mask_batch=mask_batch)
         predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed)
@@ -252,7 +251,7 @@ def train(args):
             session.run(init)
             model.fit(session, saver, train, test)
             
-            sentences, masks, predictions = model.output(session, test)
+            sentences, masks, predictions = model.output(session, train)
             originals, predictions = lookup_words(predictions, sentences, id_to_word)
             output = zip(originals, masks, predictions)
 
@@ -281,7 +280,7 @@ def evaluate(args):
             session.run(init)
             saver.restore(session, model.config.model_path)
 
-            sentences, masks, predictions = model.output(session, test)
+            sentences, masks, predictions = model.output(session, train)
             originals, predictions = lookup_words(predictions, sentences, id_to_word)
             output = zip(originals, masks, predictions)
 
