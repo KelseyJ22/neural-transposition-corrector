@@ -121,7 +121,7 @@ class UpdatedModel(Model):
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend()
-        output_path = 'plot' + str(time.time()) + '.png'
+        output_path = 'plots/plot' + str(time.time()) + '.png'
         plt.savefig(output_path)
         
         return best_score

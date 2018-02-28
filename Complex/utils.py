@@ -219,6 +219,7 @@ def save_results(f, results):
 		for j in range(0, len(results[i])):
 			f.write(str(results[i][j]))
 			f.write('\n')
+		f.write('\n')
 
 
 def save(path, map1, map2):
