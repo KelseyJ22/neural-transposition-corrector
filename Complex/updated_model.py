@@ -23,9 +23,8 @@ dev_loss = list()
 
 class UpdatedModel(Model):
 
-    def __init__(self, config, report=None):
+    def __init__(self, config):
         self.config = config
-        self.report = report
 
 
     def preprocess_sequence_data(self, examples):
@@ -70,8 +69,7 @@ class UpdatedModel(Model):
             loss = self.train_on_batch(sess, *batch)
             total += loss
             seen += 1
-            if self.report:
-                self.report.log_train_loss(loss)
+        
         train_loss.append(float(total/seen))
     
         return train_loss[-1]
@@ -117,9 +115,7 @@ class UpdatedModel(Model):
                     logger.info('New best score! Saving model in %s', self.config.model_output)
                     saver.save(sess, self.config.model_output)
             print("")
-            if self.report:
-                self.report.log_epoch()
-                self.report.save()
+            
 
         plt.plot(epochs, train_loss, label='train loss')
         plt.ylabel('Loss')

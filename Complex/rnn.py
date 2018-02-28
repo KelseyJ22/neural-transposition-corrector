@@ -28,9 +28,9 @@ class Config:
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
     embedding_size = 3 * charset_size
-    hidden_size = 300
+    hidden_size = 600
     batch_size = 32
-    n_epochs = 10
+    n_epochs = 100
     max_grad_norm = 10.
     lr = 0.001
     id_to_word = dict()
@@ -44,6 +44,8 @@ class Config:
         self.model_output = self.output_path + 'model.weights'
         self.eval_output = self.output_path + 'results.txt'
         self.log_output = self.output_path + 'log'
+        if 'model_path' in args:
+            self.model_path = args.model_path
 
 
 class RNNModel(UpdatedModel):
@@ -193,8 +195,8 @@ class RNNModel(UpdatedModel):
         return loss
 
 
-    def __init__(self, config, pretrained_embeddings, report=None):
-        super(RNNModel, self).__init__(config, report)
+    def __init__(self, config, pretrained_embeddings):
+        super(RNNModel, self).__init__(config)
 
         self.pretrained_embeddings = pretrained_embeddings
 
@@ -237,8 +239,6 @@ def train(args):
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s: %(message)s'))
     logging.getLogger().addHandler(handler)
 
-    report = None
-
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
@@ -251,20 +251,17 @@ def train(args):
         with tf.Session() as session:
             session.run(init)
             model.fit(session, saver, train, test)
-            if report:
-                report.log_output(model.output(session, test))
-                report.save()
-            else:
-                sentences, masks, predictions = model.output(session, test)
-                originals, predictions = lookup_words(predictions, sentences, id_to_word)
-                output = zip(originals, masks, predictions)
+            
+            sentences, masks, predictions = model.output(session, test)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word)
+            output = zip(originals, masks, predictions)
 
-                with open('results.txt', 'w') as f:
-                    utils.save_results(f, output)
+            with open('results.txt', 'w') as f:
+                utils.save_results(f, output)
 
 
 def evaluate(args):
-    config = Config(args.model_path)
+    config = Config(args)
 
     train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
     config.word_to_id = word_to_id
@@ -282,9 +279,14 @@ def evaluate(args):
 
         with tf.Session() as session:
             session.run(init)
-            saver.restore(session, model.config.model_output)
-            for sentence, labels, predictions in model.output(session, train):
-                print sentence, labels, predictions
+            saver.restore(session, model.config.model_path)
+
+            sentences, masks, predictions = model.output(session, test)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word)
+            output = zip(originals, masks, predictions)
+
+            with open('eval_results.txt', 'w') as f:
+                utils.save_results(f, output)
 
 
 def shell(args):

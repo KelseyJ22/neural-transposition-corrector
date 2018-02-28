@@ -214,6 +214,13 @@ def clean_sentence(sentence):
 	return res
 
 
+def save_results(f, results):
+	for i in range(0, len(results)):
+		for j in range(0, len(results[i])):
+			f.write(str(results[i][j]))
+			f.write('\n')
+
+
 def save(path, map1, map2):
 	if not os.path.exists(path):
 		os.makedirs(path)
