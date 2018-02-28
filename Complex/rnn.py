@@ -159,22 +159,31 @@ class RNNModel(UpdatedModel):
         return (utils.pad_sequences(np.asarray(x), np.asarray(y)))
 
 
-    def consolidate_predictions(self, examples, preds):
-        # Batch the predictions into groups of sentence length.
-        assert len(examples) == len(preds)
+    def consolidate_predictions(self, inputs, masks, preds):
+        assert len(inputs) == len(preds) == len(masks)
+        correct = 0
+        total = 0
+        complete = 0
+        trivial = 0
+        for i in range(0, len(preds)):
+            for j in range(0, len(preds[0])):
+                if masks[i][j]:
+                    if inputs[i][j] == preds[i][j]:
+                        correct += 1
+                    total += 1
+                else:
+                    trivial += 1
+                complete += 1
 
-        ret = []
-        for i, (sentence, labels) in enumerate(examples):
-            _, _, mask = examples[i]
-            labels_ = [l for l, m in zip(preds[i], mask) if m]
-            assert len(labels_) == len(labels)
-            ret.append([sentence, labels, labels_])
-        return ret
+        print 'correct', correct, 'out of', total, 'or', correct + trivial, 'out of', complete
+
+        return inputs, masks, preds
+
 
 
     def predict_on_batch(self, sess, inputs_batch, mask_batch):
         feed = self.create_feed_dict(inputs_batch=inputs_batch, mask_batch=mask_batch)
-        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed) # TODO: why axis=2?
+        predictions = sess.run(tf.argmax(self.pred, axis=2), feed_dict=feed)
         return predictions
 
 
@@ -197,8 +206,22 @@ class RNNModel(UpdatedModel):
         self.build()
 
 
-def lookup_words(predictions):
-    pass
+def lookup_words(predictions, originals, id_to_word):
+    sentence_preds = list()
+    for pred in predictions:
+        sentence = list()
+        for word in pred:
+            sentence.append(id_to_word[word])
+        sentence_preds.append(sentence)
+
+    sentence_in = list()
+    for sent in originals:
+        sentence = list()
+        for word in sent:
+            sentence.append(id_to_word[word])
+        sentence_in.append(sentence)
+
+    return sentence_preds, sentence_in
 
 
 def train(args):
@@ -229,13 +252,12 @@ def train(args):
             session.run(init)
             model.fit(session, saver, train, test)
             if report:
-                report.log_output(model.output(session, dev_raw)) # TODO: how are dev_raw and dev different?
+                report.log_output(model.output(session, test))
                 report.save()
             else:
-                output = model.output(session, dev_raw)
-                sentences, labels, predictions = zip(*output)
-                predictions = lookup_words(predictions)
-                output = zip(sentences, labels, predictions)
+                sentences, masks, predictions = model.output(session, test)
+                originals, predictions = lookup_words(predictions, sentences, id_to_word)
+                output = zip(originals, masks, predictions)
 
                 with open('results.txt', 'w') as f:
                     utils.save_results(f, output)
@@ -262,8 +284,7 @@ def evaluate(args):
             session.run(init)
             saver.restore(session, model.config.model_output)
             for sentence, labels, predictions in model.output(session, train):
-                predictions = [LBLS[l] for l in predictions]
-                print_sentence(args.output, sentence, labels, predictions)
+                print sentence, labels, predictions
 
 
 def shell(args):
@@ -291,8 +312,7 @@ def shell(args):
                     sentence = raw_input('input> ')
                     tokens = sentence.strip().split(" ")
                     for sentence, _, predictions in model.output(session, [(tokens, ['O'] * len(tokens))]):
-                        predictions = [LBLS[l] for l in predictions]
-                        print_sentence(sys.stdout, sentence, [""] * len(tokens), predictions)
+                        print sentence, predictions
                 except EOFError:
                     print('Closing session.')
                     break

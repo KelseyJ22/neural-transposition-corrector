@@ -172,7 +172,7 @@ def pad_sequences(x, y):
 				new_labels.append(labels[i])                
 				mask.append(True)
 			else: # pad with zeros
-				new_sentence.append('0')
+				new_sentence.append(0)
 				new_labels.append(2001)
 				mask.append(False)
 			i += 1
