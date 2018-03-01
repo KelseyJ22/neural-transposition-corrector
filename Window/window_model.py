@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 train_loss = list()
 dev_loss = list()
 
-class UpdatedModel(Model):
+class WindowModel(Model):
 
     def __init__(self, config):
         self.config = config

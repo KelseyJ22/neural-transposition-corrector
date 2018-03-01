@@ -12,7 +12,7 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 
-from updated_model import UpdatedModel
+from rnn_model import RNNModel
 from gru_cell import GRUCell
 import utils
 
@@ -28,6 +28,7 @@ class Config:
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
     embedding_size = 3 * charset_size
+    char_embed_dim = 30 # TODO research this
     hidden_size = 600
     batch_size = 32
     n_epochs = 40
@@ -48,7 +49,7 @@ class Config:
             self.model_path = args.model_path
 
 
-class RNNModel(UpdatedModel):
+class CNN_RNN(RNNModel):
     def add_placeholders(self):
         self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
@@ -75,11 +76,37 @@ class RNNModel(UpdatedModel):
         Returns:
             embeddings: numpy array of shape (None, config.max_sentence_length, config.embedding_size)
         """
-        L = tf.Variable(self.pretrained_embeddings)
-        lookups = tf.nn.embedding_lookup(L, self.input_placeholder)
-        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.embedding_size])
+        # TODO: may need to do something tricky to convolve over each word rather than the entire batch
+        embeddings = tf.get_variable('char_embed', [self.config.charset_size, self.config.char_embed_dim])
+        embedded = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        return embedded
 
-        return embeddings
+
+    def convolve(self, input_):
+        filters = [2, 3, 5] # TODO how do I select these?
+        kernels = [1,2,3] # TODO how do I select these?
+
+        # [batch_size x seq_length x embed_dim x 1]
+        input_ = tf.expand_dims(input_, -1)
+
+        layers = list()
+        for i, kernel_dim in enumerate(kernels):
+            reduced_length = input_.get_shape()[1] - kernel_dim + 1
+
+            # [batch_size x seq_length x embed_dim x feature_map_dim]
+            conv = conv2d(input_, features[i], kernel_dim, self.config.char_embed_dim, name='kernel%d' % i)
+
+            # [batch_size x 1 x 1 x feature_map_dim]
+            pool = tf.nn.max_pool(tf.tanh(conv), [1, reduced_length, 1, 1], [1, 1, 1, 1], 'VALID')
+
+            layers.append(tf.squeeze(pool))
+
+        if len(kernels) > 1:
+            output = tf.concat(1, layers)
+        else:
+            output = layers[0]
+
+        return output
 
 
     def add_prediction_op(self):
@@ -88,6 +115,8 @@ class RNNModel(UpdatedModel):
             pred: tf.Tensor of shape (batch_size, max_length, n_classes)
         """
         x = tf.cast(self.add_embedding(), tf.float32)
+
+        x = self.convolve(x) # TODO: need to figure out dimensions of results of convolution
       
         cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
 
@@ -146,12 +175,15 @@ class RNNModel(UpdatedModel):
             assert len(sentence) == len(labels)
 
             for i in range(0, len(sentence)):
-                #word = sentence[i]
                 label = labels[i]
-                # with current configuration of embedding using label for both works
-                # (will need to change if/when I try other embeddings)
-                sent_list.append(self.config.word_to_id[label])
-                label_list.append(self.config.word_to_id[label])
+                for char in label:
+                    # TODO: need to do some padding on the word level
+                    label_list.append(self.config.char_to_id[char])
+
+                word = sentence[i]
+                for char in word:
+                    # TODO: need to do some padding on the word level
+                    sent_list.append(self.config.char_to_id[char])
 
             assert len(sent_list) == len(label_list)
             if len(sent_list) > 0: # don't want any data to be [], []
@@ -195,7 +227,7 @@ class RNNModel(UpdatedModel):
 
 
     def __init__(self, config, pretrained_embeddings):
-        super(RNNModel, self).__init__(config)
+        super(CNN_RNN, self).__init__(config)
 
         self.pretrained_embeddings = pretrained_embeddings
 
@@ -241,7 +273,7 @@ def train(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(config, embeddings)
+        model = CNN_RNN(config, embeddings)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()
@@ -269,7 +301,7 @@ def evaluate(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(config, embeddings)
+        model = CNN_RNN(config, embeddings)
 
         logger.info('took %.2f seconds', time.time() - start)
 
@@ -297,7 +329,7 @@ def shell(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(config, embeddings)
+        model = CNN_RNN(config, embeddings)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()

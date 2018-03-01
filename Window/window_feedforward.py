@@ -12,7 +12,7 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 
-from updated_model import UpdatedModel
+from window_model import WindowModel
 from gru_cell import GRUCell
 import utils
 
@@ -48,7 +48,68 @@ class Config:
             self.model_path = args.model_path
 
 
-class RNNModel(UpdatedModel):
+# TODO: rewrite this to window-ify at the character level
+def make_windowed_data(data, start, end, window_size = 1):
+    """Uses the input sequences in @data to construct new windowed data points.
+
+    Args:
+        data: is a list of (sentence, label) tuples. @sentence is a list
+            containing the words in the sentence and @label is a list of
+            output labels. Each word is itself a list of
+            @n_word_features features. For example, "Chris/PER
+            Manning/PER is/O amazing/O" would become ([[1,1], [2,1],
+            [3,0], [4,0]], [1, 1, 0, 0])
+        start: the featurized `start' token to be used for windows at the very
+            beginning of the sentence.
+        end: the featurized `end' token to be used for windows at the very
+            end of the sentence.
+        window_size: the length of the window to construct.
+    Returns:
+        a new list of data points, corresponding to each window in the
+        sentence. Each data point consists of a list of
+        @n_window_features features (corresponding to words from the
+        window) to be used in the sentence and its NER label.
+        If start=[5,0] and end=[6,0], the above example should return
+        the list
+        [([5, 0, 1, 1, 2, 1], 1),
+         ([1, 1, 2, 1, 3, 0], 1),
+         ...
+         ]
+    """
+
+    windowed_data = []
+    for sentence, labels in data:
+        index = 0
+        for word in sentence:
+            new_word = list()
+            i = window_size
+            while i > 0: # adds words to the left
+                if index - i >= 0:
+                    new_word.append(sentence[index - i][0])
+                    new_word.append(sentence[index - i][1])
+                else:
+                    new_word.append(start[0])
+                    new_word.append(start[1])
+
+                i -= 1
+
+            i = 0 # adds the current word plus words to the right
+            while i <= window_size:
+                if index + i < len(sentence):
+                    new_word.append(sentence[index + i][0])
+                    new_word.append(sentence[index + i][1])
+                else:
+                    new_word.append(end[0])
+                    new_word.append(end[1])
+
+                i += 1
+            windowed_data.append((new_word, labels[index]))
+            index += 1
+    
+    return windowed_data
+
+
+class WindowNN(WindowModel):
     def add_placeholders(self):
         self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
@@ -75,11 +136,11 @@ class RNNModel(UpdatedModel):
         Returns:
             embeddings: numpy array of shape (None, config.max_sentence_length, config.embedding_size)
         """
-        L = tf.Variable(self.pretrained_embeddings)
-        lookups = tf.nn.embedding_lookup(L, self.input_placeholder)
-        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.embedding_size])
+        embeddings = tf.Variable(self.character_embeddings)
+        lookups = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        embedded = tf.reshape(lookups, [-1, self.config.n_window_features*self.config.embed_size])
 
-        return embeddings
+        return embedded
 
 
     def add_prediction_op(self):
@@ -87,28 +148,16 @@ class RNNModel(UpdatedModel):
         Returns:
             pred: tf.Tensor of shape (batch_size, max_length, n_classes)
         """
-        x = tf.cast(self.add_embedding(), tf.float32)
-      
-        cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
+        x = self.add_embedding()
 
-        U = tf.get_variable('U', shape=[self.config.hidden_size, self.config.n_classes], initializer=tf.contrib.layers.xavier_initializer())
-        b2 = tf.get_variable('b2', shape=[self.config.n_classes,], initializer = tf.constant_initializer(0))
-        h_t = tf.zeros([tf.shape(x)[0], self.config.hidden_size])
+        W = tf.get_variable('W', shape = [self.config.n_window_features * self.config.charset_size, self.config.hidden_size], initializer = tf.contrib.layers.xavier_initializer())
+        b = tf.get_variable('b', initializer = tf.zeros([self.config.hidden_size,]))
+        U = tf.get_variable('U', shape = [self.config.hidden_size, self.config.vocab_size], initializer = tf.contrib.layers.xavier_initializer())
+        b2 = tf.get_variable('b2', initializer = tf.zeros([self.config.vocab_size,]))
 
-        preds = list()
-        with tf.variable_scope('RNN'):
-            for time_step in range(self.config.max_sentence_length):
-                if time_step > 0:
-                    tf.get_variable_scope().reuse_variables()
-
-                o_t, h_t = cell(x[:,time_step,:], h_t)
-                o_drop_t = tf.nn.dropout(o_t, self.dropout_placeholder)
-                y_t = tf.matmul(o_drop_t, U) + b2
-                preds.append(y_t)
-
-        preds = tf.stack(preds, 1) # converts from list to tensor
-
-        assert preds.get_shape().as_list() == [None, self.config.max_sentence_length, self.config.n_classes], 'predictions are not of the right shape. Expected {}, got {}'.format([None, self.max_length, self.config.n_classes], preds.get_shape().as_list())
+        h = tf.nn.relu(tf.matmul(x, W) + b)
+        h_drop = tf.nn.dropout(h, self.dropout_placeholder)
+        pred = tf.matmul(h_drop, U) + b2
         return preds
 
 
@@ -194,10 +243,10 @@ class RNNModel(UpdatedModel):
         return loss
 
 
-    def __init__(self, config, pretrained_embeddings):
-        super(RNNModel, self).__init__(config)
+    def __init__(self, config):
+        super(WindowNN, self).__init__(config)
 
-        self.pretrained_embeddings = pretrained_embeddings
+        self.character_embeddings = utils.make_character_embeddings() # TODO: write this to return one-hots for all characters
 
         self.input_placeholder = None
         self.labels_placeholder = None
@@ -241,7 +290,7 @@ def train(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(config, embeddings)
+        model = WindowNN(config, embeddings)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()
@@ -269,7 +318,7 @@ def evaluate(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(config, embeddings)
+        model = WindowNN(config, embeddings)
 
         logger.info('took %.2f seconds', time.time() - start)
 
@@ -297,7 +346,7 @@ def shell(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = RNNModel(config, embeddings)
+        model = WindowNN(config, embeddings)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()
