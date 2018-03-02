@@ -129,5 +129,5 @@ reverse_embedding_lookup_file_obj.close()
 
 embed_file = 'Data/embeddings'
 embed_file_obj = open(embed_file, 'wb')
-pickle.dump(word_to_id, embed_file_obj)
+pickle.dump(embeddings, embed_file_obj)
 embed_file_obj.close()

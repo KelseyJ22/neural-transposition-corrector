@@ -12,7 +12,7 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 
-from updated_model import UpdatedModel
+from rnn_model import UpdatedModel
 from gru_cell import GRUCell
 import utils
 
@@ -26,7 +26,6 @@ class Config:
     dropout = 0.5
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
-    embedding_size = 3 * charset_size
     hidden_size = 600
     batch_size = 32
     n_epochs = 40
@@ -34,11 +33,8 @@ class Config:
     lr = 0.001
     max_word_len = 8
     id_to_word = dict()
-    word_to_id = dict()
     embedding_lookup = dict()
-    reverse_embedding_lookup = dict()
     word_vec_size = charset_size * max_word_len
-    character_embeddings = list()
 
     def __init__(self, args):
         if 'output_path' in args:
@@ -81,7 +77,7 @@ class RNNModel(UpdatedModel):
         """
         L = tf.Variable(self.pretrained_embeddings)
         lookups = tf.nn.embedding_lookup(L, self.input_placeholder)
-        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.embedding_size])
+        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.word_vec_size])
 
         return embeddings
 
@@ -93,10 +89,10 @@ class RNNModel(UpdatedModel):
         """
         x = tf.cast(self.add_embedding(), tf.float32)
       
-        cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
+        cell = GRUCell(self.config.word_vec_size, self.config.hidden_size)
 
-        U = tf.get_variable('U', shape=[self.config.hidden_size, self.config.n_classes], initializer=tf.contrib.layers.xavier_initializer())
-        b2 = tf.get_variable('b2', shape=[self.config.n_classes,], initializer = tf.constant_initializer(0))
+        U = tf.get_variable('U', shape=[self.config.hidden_size, self.config.vocab_size], initializer=tf.contrib.layers.xavier_initializer())
+        b2 = tf.get_variable('b2', shape=[self.config.vocab_size,], initializer = tf.constant_initializer(0))
         h_t = tf.zeros([tf.shape(x)[0], self.config.hidden_size])
 
         preds = list()
@@ -112,7 +108,7 @@ class RNNModel(UpdatedModel):
 
         preds = tf.stack(preds, 1) # converts from list to tensor
 
-        assert preds.get_shape().as_list() == [None, self.config.max_sentence_length, self.config.n_classes], 'predictions are not of the right shape. Expected {}, got {}'.format([None, self.max_length, self.config.n_classes], preds.get_shape().as_list())
+        assert preds.get_shape().as_list() == [None, self.config.max_sentence_length, self.config.vocab_size], 'predictions are not of the right shape. Expected {}, got {}'.format([None, self.max_length, self.config.vocab_size], preds.get_shape().as_list())
         return preds
 
 
@@ -229,14 +225,12 @@ def lookup_words(predictions, originals, id_to_word):
 
 def train(args):
     config = Config(args)
-    train, test, word_to_id, id_to_word, embedding_lookup, reverse_embedding_lookup, embeddings = utils.load_from_file()
+    train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
 
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
     config.embedding_lookup = embedding_lookup
-    config.reverse_embedding_lookup = reverse_embedding_lookup
     utils.save(config.output_path, word_to_id, id_to_word)
-    utils.save(config.output_path_'2', embedding_lookup, reverse_embedding_lookup)
 
     handler = logging.FileHandler(config.log_output)
     handler.setLevel(logging.DEBUG)
