@@ -9,6 +9,36 @@ pad = '0'
 max_length = 10
 unknown = '<UNK>'
 
+def create_weighted_embedding(word):
+	max_word_len = 8
+	characters = 'abcdefghijklmnopqrstuvwxyz'
+	charset_size = len(characters)
+	word_vec = list()
+
+	for i in range(0, max_word_len):
+	    if i < len(word):
+	        ind = characters.find(word[i])
+	        new_vec = [0] * charset_size
+	        new_vec[ind] = 1
+
+	        if i-1 >= 0:
+	            ind = characters.find(word[i-1])
+	            new_vec[ind] = 0.5
+	        elif i+1 < len(word):
+	            ind = characters.find(word[i+1])
+	            new_vec[ind] = 0.5
+	        elif i-2 >= 0:
+	            ind = characters.find(word[i-2])
+	            new_vec[ind] = 0.25
+	        elif i+2 < len(word):
+	            ind = characters.find(word[i+2])
+	            new_vec[ind] = 0.25
+
+	        word_vec += new_vec
+	    else:
+	        word_vec += [0] * charset_size # padding so all word vectors are the same size
+	return word_vec
+
 
 def create_embedding(word):
 	character_set = 'abcdefghijklmnopqrstuvwxyz'

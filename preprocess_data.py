@@ -24,11 +24,78 @@ def load_word_lookup(frequencies):
 	embeddings.append(np.zeros((78))) # to correspond to UNK
 	embeddings.append(np.zeros((78))) # to correspond to 0
 	return word_to_id, id_to_word, embeddings
+
+
+def load_word_lookup_all(train, test, frequencies):
+	word_to_id = dict()
+	id_to_word = dict()
+	word_to_id2 = dict()
+	id_to_word2 = dict()
+	embeddings = list()
+	vocab_count = 0
+	embedding_count = 0
+	for example in train:
+		sentence = example[0]
+		label = example[1]
+		for i in range(0, len(sentence)):
+			label_word = label[i]
+			scrambled_word = sentence[i]
+			if label_word in frequencies and frequencies[label_word] > 80:
+				if len(label_word) > 0:
+					if label_word not in word_to_id:
+						word_to_id[label_word] = vocab_count
+						id_to_word[vocab_count] = label_word
+						word_to_id2[label_word] = embedding_count
+						id_to_word2[embedding_count] = label_word
+						vocab_count += 1
+						embedding_count += 1
+						embeddings.append(utils.create_weighted_embedding(label_word))
+
+					if scrambled_word not in word_to_id:
+						word_to_id2[scrambled_word] = embedding_count
+						id_to_word2[embedding_count] = scrambled_word
+						embedding_count += 1
+						embeddings.append(utils.create_weighted_embedding(scrambled_word))
+
+	for example in train:
+		sentence = example[0]
+		label = example[1]
+		for i in range(0, len(sentence)):
+			label_word = label[i]
+			scrambled_word = sentence[i]
+			if label_word in frequencies and frequencies[label_word] > 80:
+				if len(label_word) > 0:
+					if label_word not in word_to_id:
+						word_to_id[label_word] = vocab_count
+						id_to_word[vocab_count] = label_word
+						word_to_id2[label_word] = embedding_count
+						id_to_word2[embedding_count] = label_word
+						vocab_count += 1
+						embedding_count += 1
+						embeddings.append(utils.create_weighted_embedding(label_word))
+						
+					if scrambled_word not in word_to_id:
+						word_to_id2[scrambled_word] = embedding_count
+						id_to_word2[embedding_count] = scrambled_word
+						embedding_count += 1
+						embeddings.append(utils.create_weighted_embedding(scrambled_word))
+
+	word_to_id['<UNK>'] = vocab_count
+	word_to_id['0'] = vocab_count + 1
+	id_to_word[vocab_count] = '<UNK>'
+	id_to_word[vocab_count + 1] = '0'
+	word_to_id2['<UNK>'] = embedding_count
+	word_to_id2['0'] = embedding_count + 1
+	id_to_word2[embedding_count] = '<UNK>'
+	id_to_word2[embedding_count + 1] = '0'
+	embeddings.append(np.zeros((len(embeddings[-1])))) # to correspond to UNK
+	embeddings.append(np.zeros((len(embeddings[-1])))) # to correspond to 0
+	return word_to_id, id_to_word, word_to_id2, id_to_word2, embeddings
 	
 
 train, test, frequencies = utils.load_data('Data/movie_lines.txt')
 
-word_to_id, id_to_word, embeddings = load_word_lookup(frequencies)
+word_to_id, id_to_word, embedding_lookup, reverse_embedding_lookup, embeddings = load_word_lookup_all(train, test, frequencies)
 
 test_file = 'Data/test'
 test_file_obj = open(test_file, 'wb')
@@ -49,6 +116,16 @@ id2word_file = 'Data/id2word'
 id2word_file_obj = open(id2word_file, 'wb')
 pickle.dump(word_to_id, id2word_file_obj)
 id2word_file_obj.close()
+
+embedding_lookup_file = 'Data/embedding_lookup'
+embedding_lookup_file_obj = open(embedding_lookup_file, 'wb')
+pickle.dump(word_to_id, embedding_lookup_file_obj)
+embedding_lookup_file_obj.close()
+
+reverse_embedding_lookup_file = 'Data/reverse_embedding_lookup'
+reverse_embedding_lookup_file_obj = open(reverse_embedding_lookup_file, 'wb')
+pickle.dump(word_to_id, reverse_embedding_lookup_file_obj)
+reverse_embedding_lookup_file_obj.close()
 
 embed_file = 'Data/embeddings'
 embed_file_obj = open(embed_file, 'wb')
