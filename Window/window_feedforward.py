@@ -27,14 +27,16 @@ class Config:
     dropout = 0.5
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
-    embedding_size = 3 * charset_size
     hidden_size = 600
     batch_size = 32
     n_epochs = 40
     max_grad_norm = 10.
     lr = 0.001
+    max_word_len = 8
     id_to_word = dict()
     word_to_id = dict()
+    word_vec_size = charset_size * max_word_len
+    character_embeddings = list()
 
     def __init__(self, args):
         if 'output_path' in args:
@@ -48,73 +50,62 @@ class Config:
             self.model_path = args.model_path
 
 
-# TODO: rewrite this to window-ify at the character level
-def make_windowed_data(data, start, end, window_size = 1):
-    """Uses the input sequences in @data to construct new windowed data points.
-
-    Args:
-        data: is a list of (sentence, label) tuples. @sentence is a list
-            containing the words in the sentence and @label is a list of
-            output labels. Each word is itself a list of
-            @n_word_features features. For example, "Chris/PER
-            Manning/PER is/O amazing/O" would become ([[1,1], [2,1],
-            [3,0], [4,0]], [1, 1, 0, 0])
-        start: the featurized `start' token to be used for windows at the very
-            beginning of the sentence.
-        end: the featurized `end' token to be used for windows at the very
-            end of the sentence.
-        window_size: the length of the window to construct.
-    Returns:
-        a new list of data points, corresponding to each window in the
-        sentence. Each data point consists of a list of
-        @n_window_features features (corresponding to words from the
-        window) to be used in the sentence and its NER label.
-        If start=[5,0] and end=[6,0], the above example should return
-        the list
-        [([5, 0, 1, 1, 2, 1], 1),
-         ([1, 1, 2, 1, 3, 0], 1),
-         ...
-         ]
-    """
-
-    windowed_data = []
-    for sentence, labels in data:
-        index = 0
-        for word in sentence:
-            new_word = list()
-            i = window_size
-            while i > 0: # adds words to the left
-                if index - i >= 0:
-                    new_word.append(sentence[index - i][0])
-                    new_word.append(sentence[index - i][1])
-                else:
-                    new_word.append(start[0])
-                    new_word.append(start[1])
-
-                i -= 1
-
-            i = 0 # adds the current word plus words to the right
-            while i <= window_size:
-                if index + i < len(sentence):
-                    new_word.append(sentence[index + i][0])
-                    new_word.append(sentence[index + i][1])
-                else:
-                    new_word.append(end[0])
-                    new_word.append(end[1])
-
-                i += 1
-            windowed_data.append((new_word, labels[index]))
-            index += 1
-    
-    return windowed_data
-
-
 class WindowNN(WindowModel):
     def add_placeholders(self):
         self.input_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
         self.labels_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_sentence_length))
         self.mask_placeholder = tf.placeholder(tf.bool, shape=(None, self.config.max_sentence_length))
         self.dropout_placeholder = tf.placeholder(tf.float32)
+
+
+    def make_windowed_data(self, data):
+        # word_vector_len = 26 * max_word_len
+        # each chunk of length 26 = 1 in the actual character, 0.5 in the neighboring characters, 0.25 in the +- 2 characters
+        # sentence = max_words x word_vector_len
+
+        sentences = list()
+        embeddings = list()
+        count = 0
+        seen = dict()
+        for sentence in data:
+            sent = list()
+            for word in sentence:
+                if word not in seen: # if we've encountered this word before we already have an embedding for it
+                    word_vec = list()
+                    for i in range(0, self.config.max_word_len):
+
+                        if i < len(word):
+                            ind = charset.find(word[i])
+                            new_vec = [0] * self.config.charset_size
+                            new_vec[ind] = 1
+                            if i-1 >= 0:
+                                ind = self.config.characters.find(word[i-1])
+                                new_vec[ind] = 0.5
+                            elif i+1 < len(word):
+                                ind = self.config.characters.find(word[i+1])
+                                new_vec[ind] = 0.5
+                            elif i-2 >= 0:
+                                ind = self.config.characters.find(word[i-2])
+                                new_vec[ind] = 0.25
+                            elif i+2 < len(word):
+                                ind = self.config.characters.find(word[i+2])
+                                new_vec[ind] = 0.25
+
+                            word_vec += new_vec
+                        else:
+                            word_vec += [0] * self.config.charset_size # padding so all word vectors are the same size
+
+                    seen[word] = count # store this word
+                    sent.append(count)
+                    embeddings.append(np.asarray(word_vec)) # store this embedding
+                    count += 1
+
+                else: # add the already-created id for this word to the sentence
+                    num = seen[word]
+                    sent.append(num)
+            sentences.append(sent)
+                  
+        return sentences, embeddings
 
 
     def create_feed_dict(self, inputs_batch, mask_batch, labels_batch=None, dropout=1):        
@@ -136,9 +127,9 @@ class WindowNN(WindowModel):
         Returns:
             embeddings: numpy array of shape (None, config.max_sentence_length, config.embedding_size)
         """
-        embeddings = tf.Variable(self.character_embeddings)
+        embeddings = tf.Variable(self.config.character_embeddings)
         lookups = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
-        embedded = tf.reshape(lookups, [-1, self.config.n_window_features*self.config.embed_size])
+        embedded = tf.reshape(lookups, [-1, self.config.word_vec_size])
 
         return embedded
 
@@ -150,7 +141,7 @@ class WindowNN(WindowModel):
         """
         x = self.add_embedding()
 
-        W = tf.get_variable('W', shape = [self.config.n_window_features * self.config.charset_size, self.config.hidden_size], initializer = tf.contrib.layers.xavier_initializer())
+        W = tf.get_variable('W', shape = [self.config.word_vec_size, self.config.hidden_size], initializer = tf.contrib.layers.xavier_initializer())
         b = tf.get_variable('b', initializer = tf.zeros([self.config.hidden_size,]))
         U = tf.get_variable('U', shape = [self.config.hidden_size, self.config.vocab_size], initializer = tf.contrib.layers.xavier_initializer())
         b2 = tf.get_variable('b2', initializer = tf.zeros([self.config.vocab_size,]))
@@ -158,7 +149,7 @@ class WindowNN(WindowModel):
         h = tf.nn.relu(tf.matmul(x, W) + b)
         h_drop = tf.nn.dropout(h, self.dropout_placeholder)
         pred = tf.matmul(h_drop, U) + b2
-        return preds
+        return pred
 
 
     def add_loss_op(self, preds):
@@ -187,27 +178,9 @@ class WindowNN(WindowModel):
 
 
     def preprocess_sequence_data(self, examples):
-        x = list()
-        y = list()
-        for sentence, labels in examples:
-            sent_list = list()
-            label_list = list()
-            assert len(sentence) == len(labels)
-
-            for i in range(0, len(sentence)):
-                #word = sentence[i]
-                label = labels[i]
-                # with current configuration of embedding using label for both works
-                # (will need to change if/when I try other embeddings)
-                sent_list.append(self.config.word_to_id[label])
-                label_list.append(self.config.word_to_id[label])
-
-            assert len(sent_list) == len(label_list)
-            if len(sent_list) > 0: # don't want any data to be [], []
-                x.append(np.asarray(sent_list))
-                y.append(np.asarray(label_list))
-
-        return (utils.pad_sequences(np.asarray(x), np.asarray(y)))
+        sentences, embeddings = make_windowed_data(examples)
+        self.config.character_embeddings = embeddings
+        return sentences
 
 
     def consolidate_predictions(self, inputs, masks, preds):
@@ -238,6 +211,7 @@ class WindowNN(WindowModel):
 
 
     def train_on_batch(self, sess, inputs_batch, labels_batch, mask_batch):
+        print labels_batch[0].shape
         feed = self.create_feed_dict(inputs_batch=inputs_batch, labels_batch=labels_batch, mask_batch=mask_batch, dropout=self.config.dropout)
         _, loss = sess.run([self.train_op, self.loss], feed_dict=feed)
         return loss
@@ -245,8 +219,6 @@ class WindowNN(WindowModel):
 
     def __init__(self, config):
         super(WindowNN, self).__init__(config)
-
-        self.character_embeddings = utils.make_character_embeddings() # TODO: write this to return one-hots for all characters
 
         self.input_placeholder = None
         self.labels_placeholder = None
@@ -290,7 +262,7 @@ def train(args):
     with tf.Graph().as_default():
         logger.info('Building model...',)
         start = time.time()
-        model = WindowNN(config, embeddings)
+        model = WindowNN(config)
         logger.info('took %.2f seconds', time.time() - start)
 
         init = tf.global_variables_initializer()
