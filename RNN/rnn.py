@@ -12,7 +12,7 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 
-from updated_model import UpdatedModel
+from rnn_model import UpdatedModel
 from gru_cell import GRUCell
 import utils
 
@@ -227,7 +227,7 @@ def lookup_words(predictions, originals, id_to_word):
 
 def train(args):
     config = Config(args)
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
+    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file_basic()
 
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
@@ -262,7 +262,7 @@ def train(args):
 def evaluate(args):
     config = Config(args)
 
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
+    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file_basic()
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
 
@@ -288,36 +288,6 @@ def evaluate(args):
                 utils.save_results(f, output)
 
 
-def shell(args):
-    config = Config(args.model_path)
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
-    config.word_to_id = word_to_id
-    config.id_to_word = id_to_word
-
-    with tf.Graph().as_default():
-        logger.info('Building model...',)
-        start = time.time()
-        model = RNNModel(config, embeddings)
-        logger.info('took %.2f seconds', time.time() - start)
-
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
-
-        with tf.Session() as session:
-            session.run(init)
-            saver.restore(session, model.config.model_output)
-
-            print("""Welcome! You can use this shell to explore the behavior of your model.""")
-            while True:
-                try:
-                    sentence = raw_input('input> ')
-                    tokens = sentence.strip().split(" ")
-                    for sentence, _, predictions in model.output(session, [(tokens, ['O'] * len(tokens))]):
-                        print sentence, predictions
-                except EOFError:
-                    print('Closing session.')
-                    break
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trains and tests RNN model')
@@ -335,11 +305,6 @@ if __name__ == '__main__':
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
-
-    command_parser = subparsers.add_parser('shell', help='')
-    command_parser.add_argument('-m', '--model-path', help='Training data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
-    command_parser.set_defaults(func=shell)
 
     ARGS = parser.parse_args()
     if ARGS.func is None:
