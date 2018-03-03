@@ -206,7 +206,7 @@ class RNNModel(UpdatedModel):
 
 
 def lookup_words(predictions, originals, id_to_word):
-    sentence_preds = list()
+    """ sentence_preds = list()
     for pred in predictions:
         sentence = list()
         for word in pred:
@@ -220,17 +220,17 @@ def lookup_words(predictions, originals, id_to_word):
             sentence.append(id_to_word[word])
         sentence_in.append(sentence)
 
-    return sentence_preds, sentence_in
+    return sentence_preds, sentence_in"""
+    return predictions, originals
 
 
 def train(args):
     config = Config(args)
     train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
 
-    config.word_to_id = word_to_id
     config.id_to_word = id_to_word
     config.embedding_lookup = embedding_lookup
-    utils.save(config.output_path, word_to_id, id_to_word)
+    utils.save(config.output_path, embedding_lookup, id_to_word)
 
     handler = logging.FileHandler(config.log_output)
     handler.setLevel(logging.DEBUG)
@@ -287,58 +287,22 @@ def evaluate(args):
                 utils.save_results(f, output)
 
 
-def shell(args):
-    config = Config(args.model_path)
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
-    config.word_to_id = word_to_id
-    config.id_to_word = id_to_word
-
-    with tf.Graph().as_default():
-        logger.info('Building model...',)
-        start = time.time()
-        model = RNNModel(config, embeddings)
-        logger.info('took %.2f seconds', time.time() - start)
-
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
-
-        with tf.Session() as session:
-            session.run(init)
-            saver.restore(session, model.config.model_output)
-
-            print("""Welcome! You can use this shell to explore the behavior of your model.""")
-            while True:
-                try:
-                    sentence = raw_input('input> ')
-                    tokens = sentence.strip().split(" ")
-                    for sentence, _, predictions in model.output(session, [(tokens, ['O'] * len(tokens))]):
-                        print sentence, predictions
-                except EOFError:
-                    print('Closing session.')
-                    break
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trains and tests RNN model')
     subparsers = parser.add_subparsers()
 
     command_parser = subparsers.add_parser('train', help='')
-    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train', help='Training data')
-    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test', help='Testing data')
+    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train_local', help='Training data')
+    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test_local', help='Testing data')
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.set_defaults(func=train)
 
     command_parser = subparsers.add_parser('evaluate', help='')
-    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test', help='Training data')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test_local', help='Training data')
     command_parser.add_argument('-m', '--model-path', help='Training data')
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
-
-    command_parser = subparsers.add_parser('shell', help='')
-    command_parser.add_argument('-m', '--model-path', help='Training data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
-    command_parser.set_defaults(func=shell)
 
     ARGS = parser.parse_args()
     if ARGS.func is None:

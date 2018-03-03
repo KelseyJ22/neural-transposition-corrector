@@ -114,20 +114,94 @@ def parse_str(line):
 
 
 def load_from_file():
-	test_file = '../Data/test'
-	test_file_obj = open(test_file, 'r')
+	test_file = '../Data/test_local'
+	test_file_obj = open(test_file, 'rb')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
+	print 'loaded test data'
 
-	train_file = '../Data/train'
-	train_file_obj = open(train_file, 'r')
+	train_file = '../Data/train_local'
+	train_file_obj = open(train_file, 'rb')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
+	print 'loaded train data'
 
-	word2id_file = '../Data/word2id'
-	word2id_file_obj = open(word2id_file, 'r')
+
+	"""word2id_file = '../Data/word2id'
+	word2id_file_obj = open(word2id_file, 'rb')
 	word_to_id = pickle.load(word2id_file_obj)
 	word2id_file_obj.close()
+	print 'loaded word_to_id lookup'"""
+
+	id2word_file = '../Data/id2word_local'
+	id2word_file_obj = open(id2word_file, 'rb')
+	id_to_word = pickle.load(id2word_file_obj)
+	id2word_file_obj.close()
+	print 'loaded id_to_word lookup'
+
+	embedding_lookup_file = '../Data/embedding_lookup_local'
+	embedding_lookup_file_obj = open(embedding_lookup_file, 'rb')
+	embedding_lookup = pickle.load(embedding_lookup_file_obj)
+	embedding_lookup_file_obj.close()
+	print 'loaded embedding lookup counts'
+
+	"""reverse_embedding_lookup_file = '../Data/reverse_embedding_lookup'
+	reverse_embedding_lookup_file_obj = open(reverse_embedding_lookup_file, 'rb')
+	reverse_embedding_lookup = pickle.load(reverse_embedding_lookup_file_obj)
+	reverse_embedding_lookup_file_obj.close()
+	print 'loaded reverse embedding lookup counts'"""
+
+	embed_file = '../Data/embeddings_local'
+	embed_file_obj = open(embed_file, 'rb')
+	embeddings = pickle.load(embed_file_obj)
+	embed_file_obj.close()
+	print 'loaded embeddings'
+
+	return train, test, id_to_word, embedding_lookup, embeddings
+
+def load_from_file_basic():
+	test_file = '../Data/test_local'
+	test_file_obj = open(test_file, 'rb')
+	test = pickle.load(test_file_obj)
+	test_file_obj.close()
+	print 'loaded test data'
+
+	train_file = '../Data/train_local'
+	train_file_obj = open(train_file, 'rb')
+	train = pickle.load(train_file_obj)
+	train_file_obj.close()
+	print 'loaded train data'
+
+
+	word2id_file = '../Data/word2id_local'
+	word2id_file_obj = open(word2id_file, 'rb')
+	word_to_id = pickle.load(word2id_file_obj)
+	word2id_file_obj.close()
+	print 'loaded word_to_id lookup_local'
+
+	id2word_file = '../Data/id2word_local'
+	id2word_file_obj = open(id2word_file, 'rb')
+	id_to_word = pickle.load(id2word_file_obj)
+	id2word_file_obj.close()
+	print 'loaded id_to_word lookup'
+
+	"""embedding_lookup_file = '../Data/embedding_lookup'
+	embedding_lookup_file_obj = open(embedding_lookup_file, 'rb')
+	embedding_lookup = pickle.load(embedding_lookup_file_obj)
+	embedding_lookup_file_obj.close()
+	print 'loaded embedding lookup counts'
+
+	reverse_embedding_lookup_file = '../Data/reverse_embedding_lookup'
+	reverse_embedding_lookup_file_obj = open(reverse_embedding_lookup_file, 'rb')
+	reverse_embedding_lookup = pickle.load(reverse_embedding_lookup_file_obj)
+	reverse_embedding_lookup_file_obj.close()
+	print 'loaded reverse embedding lookup counts'
+
+	embed_file = '../Data/embeddings'
+	embed_file_obj = open(embed_file, 'rb')
+	embeddings = pickle.load(embed_file_obj)
+	embed_file_obj.close()
+	print 'loaded embeddings'"""
 
 	embeddings_temp = dict()
 	id_to_word = dict()

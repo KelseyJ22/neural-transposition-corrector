@@ -104,6 +104,31 @@ def add_error(word):
 	return new_word
 
 
+def divide(string):
+	chunks = list()
+	i = 3
+	prev_i = 0
+	while i < len(string):
+		chunks.append(string[prev_i:i])
+		prev_i = i 
+		i += 3
+	chunks.append(string[prev_i:]) # otherwise will miss end of the string
+	return chunks
+
+
+def add_local_error(word):
+	inner_chars = word[1:-1]
+	if len(inner_chars) > 3:
+		inners = divide(inner_chars)
+		new_word = word[0]
+		for chunk in inners:
+			new_word += shuffle_string(chunk)
+		new_word += word[-1]
+	else:
+		new_word = word[0] + shuffle_string(inner_chars) + word[-1]
+	return new_word
+
+
 def true_len(word):
 	count = 0
 	for char in word:
@@ -148,7 +173,7 @@ def generate_errors(data, frequencies):
 					if is_transposable(word):
 						gen_error = random.randint(0, 3)
 						if gen_error == 0:
-							new_sentence.append(add_error(word))
+							new_sentence.append(add_local_error(word))
 						else:
 							new_sentence.append(word)
 					else:
