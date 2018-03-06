@@ -9,6 +9,8 @@ import os
 pad = '0'
 max_length = 10
 unknown = '<UNK>'
+max_word_len = 10
+char_embedding_size = 300
 
 def create_embedding(word):
 	character_set = 'abcdefghijklmnopqrstuvwxyz'
@@ -114,7 +116,43 @@ def parse_str(line):
 
 
 def build_embeddings(char_embeddings, train, test):
-	for sent in 
+	embedding_lookup = dict()
+	curr_id = 0
+
+	for pair in train:
+		inp = pair[0]
+		label = pair[1]
+		for sentence in inp:
+			for word in sentence:
+				if word not in embedding_lookup:
+					embedding_lookup[word] = curr_id
+					curr_id += 1
+					word_embedding = list()
+					for i in range(0, max_word_len):
+						if i < len(word):
+							char = word[i]
+							embed = char_embeddings[char]
+							word_embedding.append(embed)
+						else:
+							word_embedding.append(np.zeros((char_embedding_size)))
+					word_embeddings.append(np.asarray(word_embedding))
+
+		for sentence in label:
+			for word in sentence:
+				if word not in embedding_lookup:
+					embedding_lookup[word] = curr_id
+					curr_id += 1
+					word_embedding = list()
+					for i in range(0, max_word_len):
+						if i < len(word):
+							char = word[i]
+							embed = char_embeddings[char]
+							word_embedding.append(embed)
+						else:
+							word_embedding.append(np.zeros((char_embedding_size)))
+					word_embeddings.append(np.asarray(word_embedding))
+
+	return np.asarray(word_embeddings), embedding_lookup
 
 
 def load_from_file():
@@ -128,20 +166,15 @@ def load_from_file():
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 
-	#word2id_file = '../Data/word2id'
-	#word2id_file_obj = open(word2id_file, 'r')
-	#word_to_id = pickle.load(word2id_file_obj)
-	#word2id_file_obj.close()
+	word2id_file = '../Data/word2id'
+	word2id_file_obj = open(word2id_file, 'r')
+	word_to_id = pickle.load(word2id_file_obj)
+	word2id_file_obj.close()
 
-	#embeddings_temp = dict()
-	#id_to_word = dict()
-	#for word in word_to_id:
-	#	id_to_word[word_to_id[word]] = word
-	#	embeddings_temp[word_to_id[word]] = create_embedding(word)
-
-	#embeddings = list()
-	#for i in range(0, 2393):
-	#	embeddings.append(embeddings_temp[i])
+	id_to_word = dict()
+	for word in word_to_id:
+		id_to_word[word_to_id[word]] = word
+	
 	embeddings_obj = open('char_embeddings.txt', 'r')
 	char_embeddings = dict()
 	for line in embeddings_obj:
@@ -154,6 +187,6 @@ def load_from_file():
 			res.append(entry)
 		char_embeddings[key] = np.asarray(res)
 
-	embeddings, word_to_id, id_to_word = build_embeddings(char_embeddings, train, test)
+	embeddings, embedding_lookup = build_embeddings(char_embeddings, train, test)
 
 	return train, test, word_to_id, id_to_word, embeddings
