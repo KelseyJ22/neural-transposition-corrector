@@ -90,37 +90,37 @@ embedding_lookup, reverse_embedding_lookup, embeddings = load_word_lookup_all(tr
 
 word_to_id, id_to_word, _ = load_word_lookup(frequencies)
 
-test_file = 'Data/test_local'
+test_file = 'Data/test_all'
 test_file_obj = open(test_file, 'wb')
 pickle.dump(test, test_file_obj)
 test_file_obj.close()
 
-train_file = 'Data/train_local'
+train_file = 'Data/train_all'
 train_file_obj = open(train_file, 'wb')
 pickle.dump(train, train_file_obj)
 train_file_obj.close()
 
-word2id_file = 'Data/word2id_local'
+word2id_file = 'Data/word2id_all'
 word2id_file_obj = open(word2id_file, 'wb')
 pickle.dump(word_to_id, word2id_file_obj)
 word2id_file_obj.close()
 
-id2word_file = 'Data/id2word_local'
+id2word_file = 'Data/id2word_all'
 id2word_file_obj = open(id2word_file, 'wb')
 pickle.dump(word_to_id, id2word_file_obj)
 id2word_file_obj.close()
 
-embedding_lookup_file = 'Data/embedding_lookup_local'
+embedding_lookup_file = 'Data/embedding_lookup_all'
 embedding_lookup_file_obj = open(embedding_lookup_file, 'wb')
 pickle.dump(word_to_id, embedding_lookup_file_obj)
 embedding_lookup_file_obj.close()
 
-reverse_embedding_lookup_file = 'Data/reverse_embedding_lookup_local'
+reverse_embedding_lookup_file = 'Data/reverse_embedding_lookup_all'
 reverse_embedding_lookup_file_obj = open(reverse_embedding_lookup_file, 'wb')
 pickle.dump(word_to_id, reverse_embedding_lookup_file_obj)
 reverse_embedding_lookup_file_obj.close()
 
-embed_file = 'Data/embeddings_local'
+embed_file = 'Data/embeddings_all'
 embed_file_obj = open(embed_file, 'wb')
 pickle.dump(embeddings, embed_file_obj)
 embed_file_obj.close()

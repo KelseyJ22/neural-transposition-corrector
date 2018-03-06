@@ -28,7 +28,7 @@ class Config:
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
     embedding_size = 3 * charset_size
-    hidden_size = 600
+    hidden_size = 800
     batch_size = 32
     n_epochs = 40
     max_grad_norm = 10.
@@ -294,13 +294,13 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
 
     command_parser = subparsers.add_parser('train', help='')
-    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train_local', help='Training data')
-    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test_local', help='Testing data')
+    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train_all', help='Training data')
+    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test_all', help='Testing data')
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.set_defaults(func=train)
 
     command_parser = subparsers.add_parser('evaluate', help='')
-    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test_local', help='Training data')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test_all', help='Training data')
     command_parser.add_argument('-m', '--model-path', help='Training data')
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')

@@ -113,6 +113,10 @@ def parse_str(line):
 	return (inp, outp)
 
 
+def build_embeddings(char_embeddings, train, test):
+	for sent in 
+
+
 def load_from_file():
 	test_file = '../Data/test'
 	test_file_obj = open(test_file, 'r')
@@ -124,19 +128,32 @@ def load_from_file():
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 
-	word2id_file = '../Data/word2id'
-	word2id_file_obj = open(word2id_file, 'r')
-	word_to_id = pickle.load(word2id_file_obj)
-	word2id_file_obj.close()
+	#word2id_file = '../Data/word2id'
+	#word2id_file_obj = open(word2id_file, 'r')
+	#word_to_id = pickle.load(word2id_file_obj)
+	#word2id_file_obj.close()
 
-	embeddings_temp = dict()
-	id_to_word = dict()
-	for word in word_to_id:
-		id_to_word[word_to_id[word]] = word
-		embeddings_temp[word_to_id[word]] = create_embedding(word)
+	#embeddings_temp = dict()
+	#id_to_word = dict()
+	#for word in word_to_id:
+	#	id_to_word[word_to_id[word]] = word
+	#	embeddings_temp[word_to_id[word]] = create_embedding(word)
 
-	embeddings = list()
-	for i in range(0, 2393):
-		embeddings.append(embeddings_temp[i])
+	#embeddings = list()
+	#for i in range(0, 2393):
+	#	embeddings.append(embeddings_temp[i])
+	embeddings_obj = open('char_embeddings.txt', 'r')
+	char_embeddings = dict()
+	for line in embeddings_obj:
+		split = line.split(' ')
+		key = split[0].strip()
+		value = split[1]
+		split_val = value.split(',')
+		res = list()
+		for entry in split_val:
+			res.append(entry)
+		char_embeddings[key] = np.asarray(res)
 
-	return train, test, word_to_id, id_to_word, np.asarray(embeddings)
+	embeddings, word_to_id, id_to_word = build_embeddings(char_embeddings, train, test)
+
+	return train, test, word_to_id, id_to_word, embeddings
