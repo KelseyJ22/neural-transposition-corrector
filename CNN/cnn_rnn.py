@@ -28,7 +28,7 @@ class Config:
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
     embedding_size = 3 * charset_size
-    char_embed_dim = 30 # TODO research this
+    char_embed_dim = 300
     hidden_size = 600
     batch_size = 32
     n_epochs = 40
@@ -36,6 +36,7 @@ class Config:
     lr = 0.001
     id_to_word = dict()
     word_to_id = dict()
+    embedding_lookup = dict()
 
     def __init__(self, args):
         if 'output_path' in args:
@@ -82,19 +83,19 @@ class CNN_RNN(RNNModel):
         return embedded
 
 
-    def convolve(self, input_):
-        filters = [2, 3, 5] # TODO how do I select these?
+    def convolve(self, inp):
+        """ filters = [2, 3, 5] # TODO how do I select these?
         kernels = [1,2,3] # TODO how do I select these?
 
         # [batch_size x seq_length x embed_dim x 1]
-        input_ = tf.expand_dims(input_, -1)
+        inp = tf.expand_dims(inp, -1)
 
         layers = list()
         for i, kernel_dim in enumerate(kernels):
-            reduced_length = input_.get_shape()[1] - kernel_dim + 1
+            reduced_length = inp.get_shape()[1] - kernel_dim + 1
 
             # [batch_size x seq_length x embed_dim x feature_map_dim]
-            conv = conv2d(input_, features[i], kernel_dim, self.config.char_embed_dim, name='kernel%d' % i)
+            conv = tf.layers.conv2d(inp, features[i], kernel_dim, self.config.char_embed_dim, name='kernel%d' % i)
 
             # [batch_size x 1 x 1 x feature_map_dim]
             pool = tf.nn.max_pool(tf.tanh(conv), [1, reduced_length, 1, 1], [1, 1, 1, 1], 'VALID')
@@ -104,9 +105,19 @@ class CNN_RNN(RNNModel):
         if len(kernels) > 1:
             output = tf.concat(1, layers)
         else:
-            output = layers[0]
-
-        return output
+            output = layers[0]"""
+        inp = tf.expand_dims(inp, -1)
+        conv = tf.layers.conv2d(inputs=inp, filters=64, kernel_size=[5, 5], padding='same', activation=tf.nn.relu)
+        print 'conv size', conv.get_shape().as_list()
+        pool = tf.layers.max_pooling2d(inputs=conv, pool_size=[2, 2], strides=2)
+        print 'pool size', pool.get_shape().as_list()
+        conv2 = tf.layers.conv2d(inputs=pool, filters=32, kernel_size=[5, 5], padding='same', activation=tf.nn.relu)
+        print 'conv size', conv2.get_shape().as_list()
+        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=5)
+        print 'pool size', pool2.get_shape().as_list()
+        flattened = tf.reshape(pool2, [-1, 1 * 30 * 32])
+        print 'flattened size', flattened.get_shape().as_list()
+        return flattened
 
 
     def add_prediction_op(self):
@@ -116,7 +127,9 @@ class CNN_RNN(RNNModel):
         """
         x = tf.cast(self.add_embedding(), tf.float32)
 
-        x = self.convolve(x) # TODO: need to figure out dimensions of results of convolution
+        print 'before', x.get_shape().as_list()
+        x = self.convolve(x)
+        print 'after', x.get_shape().as_list()
       
         cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
 
@@ -176,15 +189,10 @@ class CNN_RNN(RNNModel):
 
             for i in range(0, len(sentence)):
                 label = labels[i]
-                for char in label:
-                    # TODO: need to do some padding on the word level
-                    label_list.append(self.config.char_to_id[char])
-
                 word = sentence[i]
-                for char in word:
-                    # TODO: need to do some padding on the word level
-                    sent_list.append(self.config.char_to_id[char])
-
+                sent_list.append(self.embedding_lookup(word))
+                label_list.append(self.embedding_lookup(label))
+                
             assert len(sent_list) == len(label_list)
             if len(sent_list) > 0: # don't want any data to be [], []
                 x.append(np.asarray(sent_list))
@@ -259,10 +267,12 @@ def lookup_words(predictions, originals, id_to_word):
 
 def train(args):
     config = Config(args)
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
+    train, test, word_to_id, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
 
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
+    config.embedding_lookup = embedding_lookup
+
     utils.save(config.output_path, word_to_id, id_to_word)
 
     handler = logging.FileHandler(config.log_output)

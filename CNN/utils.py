@@ -118,6 +118,7 @@ def parse_str(line):
 def build_embeddings(char_embeddings, train, test):
 	embedding_lookup = dict()
 	curr_id = 0
+	word_embeddings = list()
 
 	for pair in train:
 		inp = pair[0]
@@ -131,7 +132,10 @@ def build_embeddings(char_embeddings, train, test):
 					for i in range(0, max_word_len):
 						if i < len(word):
 							char = word[i]
-							embed = char_embeddings[char]
+							if char in char_embeddings:
+								embed = char_embeddings[char]
+							else:
+								embed = np.zeros((char_embedding_size))
 							word_embedding.append(embed)
 						else:
 							word_embedding.append(np.zeros((char_embedding_size)))
@@ -146,7 +150,10 @@ def build_embeddings(char_embeddings, train, test):
 					for i in range(0, max_word_len):
 						if i < len(word):
 							char = word[i]
-							embed = char_embeddings[char]
+							if char in char_embeddings:
+								embed = char_embeddings[char]
+							else:
+								embed = np.zeros((char_embedding_size))
 							word_embedding.append(embed)
 						else:
 							word_embedding.append(np.zeros((char_embedding_size)))
@@ -175,18 +182,17 @@ def load_from_file():
 	for word in word_to_id:
 		id_to_word[word_to_id[word]] = word
 	
-	embeddings_obj = open('char_embeddings.txt', 'r')
+	embeddings_obj = open('../Data/char_embeddings.txt', 'r')
 	char_embeddings = dict()
 	for line in embeddings_obj:
 		split = line.split(' ')
 		key = split[0].strip()
-		value = split[1]
-		split_val = value.split(',')
+		value = split[1:]
 		res = list()
-		for entry in split_val:
-			res.append(entry)
+		for entry in value:
+			res.append(float(entry))
 		char_embeddings[key] = np.asarray(res)
 
 	embeddings, embedding_lookup = build_embeddings(char_embeddings, train, test)
 
-	return train, test, word_to_id, id_to_word, embeddings
+	return train, test, word_to_id, id_to_word, embedding_lookup, embeddings
