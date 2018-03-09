@@ -27,7 +27,6 @@ class Config:
     dropout = 0.5
     characters = 'abcdefghijklmnopqrstuvwxyz'
     charset_size = len(characters)
-    embedding_size = 3 * charset_size
     char_embed_dim = 300
     hidden_size = 600
     batch_size = 32
@@ -78,27 +77,23 @@ class CNN_RNN(RNNModel):
         Returns:
             embeddings: numpy array of shape (None, config.max_sentence_length, config.embedding_size)
         """
-        #print 'input shape', self.input_placeholder.get_shape().as_list()
-        #embeddings = tf.get_variable('char_embed', [self.config.expanded_vocab_size, self.config.char_embed_dim])
-        #embeddings = tf.get_variable('embeddings', shape=[self.config.expanded_vocab_size, self.max_word_length, self.config.char_embed_dim], initializer=tf.constant_initializer(np.array(self.pretrained_embeddings)))
-        #embedded = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
         L = tf.Variable(self.pretrained_embeddings)
         lookups = tf.nn.embedding_lookup(L, self.input_placeholder)
-        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.max_word_length, self.config.embedding_size])
-        return embedded
+        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.max_word_length, self.config.char_embed_dim])
+        return embeddings
 
 
     def convolve(self, inp):
         inp = tf.expand_dims(inp, -1)
-        conv = tf.layers.conv2d(inputs=inp, filters=64, kernel_size=[5, 5], padding='same', activation=tf.nn.relu)
+        conv = tf.layers.conv3d(inputs=inp, filters=64, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
         print 'conv size', conv.get_shape().as_list()
-        pool = tf.layers.max_pooling2d(inputs=conv, pool_size=[2, 2], strides=2)
+        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[2, 2, 2], strides=2)
         print 'pool size', pool.get_shape().as_list()
-        conv2 = tf.layers.conv2d(inputs=pool, filters=32, kernel_size=[5, 5], padding='same', activation=tf.nn.relu)
+        conv2 = tf.layers.conv3d(inputs=pool, filters=32, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
         print 'conv size', conv2.get_shape().as_list()
-        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=5)
+        pool2 = tf.layers.max_pooling3d(inputs=conv2, pool_size=[2, 2, 2], strides=5)
         print 'pool size', pool2.get_shape().as_list()
-        flattened = tf.reshape(pool2, [-1, 1 * 30 * 32])
+        flattened = tf.reshape(pool2, [-1, 10, 1 * 30 * 32])
         print 'flattened size', flattened.get_shape().as_list()
         return flattened
 
@@ -110,10 +105,11 @@ class CNN_RNN(RNNModel):
         """
         x = tf.cast(self.add_embedding(), tf.float32)
 
-        print 'embedded shape', x.get_shape().as_list()
-        new_x = self.convolve(x)
+        print 'original x shape', x.get_shape().as_list()
+        x = self.convolve(x)
+        print 'new x shape', x.get_shape().as_list()
       
-        cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
+        cell = GRUCell(1 * 30 * 32, self.config.hidden_size)
 
         U = tf.get_variable('U', shape=[self.config.hidden_size, self.config.n_classes], initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.get_variable('b2', shape=[self.config.n_classes,], initializer = tf.constant_initializer(0))
@@ -172,8 +168,8 @@ class CNN_RNN(RNNModel):
             for i in range(0, len(sentence)):
                 label = labels[i]
                 word = sentence[i]
-                sent_list.append(self.embedding_dict(word))
-                label_list.append(self.embedding_dict(label))
+                sent_list.append(self.config.embedding_dict[word])
+                label_list.append(self.config.embedding_dict[label])
                 
             assert len(sent_list) == len(label_list)
             if len(sent_list) > 0: # don't want any data to be [], []
