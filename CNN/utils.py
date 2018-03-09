@@ -11,22 +11,6 @@ max_length = 10
 unknown = '<UNK>'
 max_word_len = 10
 char_embedding_size = 300
-
-def create_embedding(word):
-	character_set = 'abcdefghijklmnopqrstuvwxyz'
-	charset_size = len(character_set)
-
-	first = character_set.find(word[0])
-	last = character_set.find(word[-1])
-	bow = list()
-	for i in range(1, len(word)-1):
-		bow.append(character_set.find(word[i]))
-	embedding = np.zeros((3 * charset_size))
-	embedding[first] = 1
-	for char in bow:
-		embedding[charset_size + char] = 1
-	embedding[charset_size * 2 + last] = 1
-	return embedding
 	
 
 def pad_sequences(x, y):
@@ -115,49 +99,48 @@ def parse_str(line):
 	return (inp, outp)
 
 
-def build_embeddings(char_embeddings, train, test):
+def build_embeddings(char_embeddings, train):
 	embedding_lookup = dict()
 	curr_id = 0
 	word_embeddings = list()
 
-	for pair in train:
-		inp = pair[0]
-		label = pair[1]
-		for sentence in inp:
-			for word in sentence:
-				if word not in embedding_lookup:
-					embedding_lookup[word] = curr_id
-					curr_id += 1
-					word_embedding = list()
-					for i in range(0, max_word_len):
-						if i < len(word):
-							char = word[i]
-							if char in char_embeddings:
-								embed = char_embeddings[char]
-							else:
-								embed = np.zeros((char_embedding_size))
-							word_embedding.append(embed)
+	for i in range(0, len(train)):
+		inp = train[i][0]
+		label = train[i][1]
+		for word in inp:
+			if word not in embedding_lookup:
+				embedding_lookup[word] = curr_id
+				curr_id += 1
+				word_embedding = list()
+				for i in range(0, max_word_len):
+					if i < len(word):
+						char = word[i]
+						if char in char_embeddings:
+							embed = char_embeddings[char]
 						else:
-							word_embedding.append(np.zeros((char_embedding_size)))
-					word_embeddings.append(np.asarray(word_embedding))
+							embed = np.zeros((char_embedding_size))
+						word_embedding.append(embed)
+					else:
+						word_embedding.append(np.zeros((char_embedding_size)))
+				word_embeddings.append(np.asarray(word_embedding))
 
-		for sentence in label:
-			for word in sentence:
-				if word not in embedding_lookup:
-					embedding_lookup[word] = curr_id
-					curr_id += 1
-					word_embedding = list()
-					for i in range(0, max_word_len):
-						if i < len(word):
-							char = word[i]
-							if char in char_embeddings:
-								embed = char_embeddings[char]
-							else:
-								embed = np.zeros((char_embedding_size))
-							word_embedding.append(embed)
+		for word in label:
+			if word not in embedding_lookup:
+				embedding_lookup[word] = curr_id
+				curr_id += 1
+				word_embedding = list()
+				for i in range(0, max_word_len):
+					if i < len(word):
+						char = word[i]
+						if char in char_embeddings:
+							embed = char_embeddings[char]
 						else:
-							word_embedding.append(np.zeros((char_embedding_size)))
-					word_embeddings.append(np.asarray(word_embedding))
+							embed = np.zeros((char_embedding_size))
+						word_embedding.append(embed)
+					else:
+						word_embedding.append(np.zeros((char_embedding_size)))
+
+				word_embeddings.append(np.asarray(word_embedding))
 
 	return np.asarray(word_embeddings), embedding_lookup
 
@@ -193,6 +176,6 @@ def load_from_file():
 			res.append(float(entry))
 		char_embeddings[key] = np.asarray(res)
 
-	embeddings, embedding_lookup = build_embeddings(char_embeddings, train, test)
+	embeddings, embedding_lookup = build_embeddings(char_embeddings, train)
 
 	return train, test, word_to_id, id_to_word, embedding_lookup, embeddings

@@ -36,7 +36,8 @@ class Config:
     lr = 0.001
     id_to_word = dict()
     word_to_id = dict()
-    embedding_lookup = dict()
+    embedding_dict = dict()
+    max_word_length = 10
 
     def __init__(self, args):
         if 'output_path' in args:
@@ -77,35 +78,17 @@ class CNN_RNN(RNNModel):
         Returns:
             embeddings: numpy array of shape (None, config.max_sentence_length, config.embedding_size)
         """
-        # TODO: may need to do something tricky to convolve over each word rather than the entire batch
-        embeddings = tf.get_variable('char_embed', [self.config.charset_size, self.config.char_embed_dim])
-        embedded = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        #print 'input shape', self.input_placeholder.get_shape().as_list()
+        #embeddings = tf.get_variable('char_embed', [self.config.expanded_vocab_size, self.config.char_embed_dim])
+        #embeddings = tf.get_variable('embeddings', shape=[self.config.expanded_vocab_size, self.max_word_length, self.config.char_embed_dim], initializer=tf.constant_initializer(np.array(self.pretrained_embeddings)))
+        #embedded = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        L = tf.Variable(self.pretrained_embeddings)
+        lookups = tf.nn.embedding_lookup(L, self.input_placeholder)
+        embeddings = tf.reshape(lookups, [-1, self.config.max_sentence_length, self.config.max_word_length, self.config.embedding_size])
         return embedded
 
 
     def convolve(self, inp):
-        """ filters = [2, 3, 5] # TODO how do I select these?
-        kernels = [1,2,3] # TODO how do I select these?
-
-        # [batch_size x seq_length x embed_dim x 1]
-        inp = tf.expand_dims(inp, -1)
-
-        layers = list()
-        for i, kernel_dim in enumerate(kernels):
-            reduced_length = inp.get_shape()[1] - kernel_dim + 1
-
-            # [batch_size x seq_length x embed_dim x feature_map_dim]
-            conv = tf.layers.conv2d(inp, features[i], kernel_dim, self.config.char_embed_dim, name='kernel%d' % i)
-
-            # [batch_size x 1 x 1 x feature_map_dim]
-            pool = tf.nn.max_pool(tf.tanh(conv), [1, reduced_length, 1, 1], [1, 1, 1, 1], 'VALID')
-
-            layers.append(tf.squeeze(pool))
-
-        if len(kernels) > 1:
-            output = tf.concat(1, layers)
-        else:
-            output = layers[0]"""
         inp = tf.expand_dims(inp, -1)
         conv = tf.layers.conv2d(inputs=inp, filters=64, kernel_size=[5, 5], padding='same', activation=tf.nn.relu)
         print 'conv size', conv.get_shape().as_list()
@@ -127,9 +110,8 @@ class CNN_RNN(RNNModel):
         """
         x = tf.cast(self.add_embedding(), tf.float32)
 
-        print 'before', x.get_shape().as_list()
-        x = self.convolve(x)
-        print 'after', x.get_shape().as_list()
+        print 'embedded shape', x.get_shape().as_list()
+        new_x = self.convolve(x)
       
         cell = GRUCell(self.config.embedding_size, self.config.hidden_size)
 
@@ -190,8 +172,8 @@ class CNN_RNN(RNNModel):
             for i in range(0, len(sentence)):
                 label = labels[i]
                 word = sentence[i]
-                sent_list.append(self.embedding_lookup(word))
-                label_list.append(self.embedding_lookup(label))
+                sent_list.append(self.embedding_dict(word))
+                label_list.append(self.embedding_dict(label))
                 
             assert len(sent_list) == len(label_list)
             if len(sent_list) > 0: # don't want any data to be [], []
@@ -267,11 +249,13 @@ def lookup_words(predictions, originals, id_to_word):
 
 def train(args):
     config = Config(args)
-    train, test, word_to_id, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
+    train, test, word_to_id, id_to_word, embedding_dict, embeddings = utils.load_from_file()
 
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
-    config.embedding_lookup = embedding_lookup
+    config.embedding_dict = embedding_dict
+    config.expanded_vocab_size = len(embeddings)
+    print 'embedding size', embeddings[0].shape
 
     utils.save(config.output_path, word_to_id, id_to_word)
 

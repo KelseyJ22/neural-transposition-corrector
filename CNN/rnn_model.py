@@ -102,6 +102,7 @@ class RNNModel(Model):
 
         train = self.preprocess_sequence_data(train_examples_raw)
         dev = self.preprocess_sequence_data(dev_set_raw)
+        print train
 
         epochs = list()
         for epoch in range(self.config.n_epochs):
