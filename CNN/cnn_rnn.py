@@ -86,15 +86,15 @@ class CNN_RNN(RNNModel):
     def convolve(self, inp):
         inp = tf.expand_dims(inp, -1)
         print inp
-        conv = tf.layers.conv3d(inputs=inp, filters=64, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
+        conv = tf.layers.conv3d(inputs=inp, filters=10, kernel_size=[1, 1, 5], padding='same', activation=tf.nn.relu)
         print conv
-        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[1, 2, 2], strides=[1, 2, 2])
+        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[1, 2, 50], strides=[1, 2, 50])
         print pool
-        conv2 = tf.layers.conv3d(inputs=pool, filters=32, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
+        conv2 = tf.layers.conv3d(inputs=pool, filters=10, kernel_size=[1, 1, 5], padding='same', activation=tf.nn.relu)
         print conv2
-        pool2 = tf.layers.max_pooling3d(inputs=conv2, pool_size=[1, 2, 2], strides=[1, 5, 5])
+        pool2 = tf.layers.max_pooling3d(inputs=conv2, pool_size=[1, 1, 2], strides=[1, 1, 2])
         print pool2
-        flattened = tf.reshape(pool2, [-1, 10, 1 * 30 * 32])
+        flattened = tf.reshape(pool2, [-1, 10, 5 * 3 * 10])
         print flattened
         return flattened
 
@@ -109,7 +109,7 @@ class CNN_RNN(RNNModel):
         print x
         x = self.convolve(x)
       
-        cell = GRUCell(1 * 30 * 32, self.config.hidden_size)
+        cell = GRUCell(5 * 3 * 10, self.config.hidden_size)
 
         U = tf.get_variable('U', shape=[self.config.hidden_size, self.config.n_classes], initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.get_variable('b2', shape=[self.config.n_classes,], initializer = tf.constant_initializer(0))
@@ -315,8 +315,8 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
 
     command_parser = subparsers.add_parser('train', help='')
-    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train', help='Training data')
-    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test', help='Testing data')
+    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train_local', help='Training data')
+    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test_local', help='Testing data')
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.set_defaults(func=train)
 

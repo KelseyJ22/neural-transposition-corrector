@@ -146,12 +146,12 @@ def build_embeddings(char_embeddings, train):
 
 
 def load_from_file():
-	test_file = '../Data/test'
+	test_file = '../Data/test_local'
 	test_file_obj = open(test_file, 'r')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
 
-	train_file = '../Data/train'
+	train_file = '../Data/train_local'
 	train_file_obj = open(train_file, 'r')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
