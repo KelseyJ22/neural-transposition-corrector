@@ -30,7 +30,7 @@ class Config:
     char_embed_dim = 300
     hidden_size = 600
     batch_size = 32
-    n_epochs = 40
+    n_epochs = 10
     max_grad_norm = 10.
     lr = 0.001
     id_to_word = dict()
@@ -85,16 +85,17 @@ class CNN_RNN(RNNModel):
 
     def convolve(self, inp):
         inp = tf.expand_dims(inp, -1)
+        print inp
         conv = tf.layers.conv3d(inputs=inp, filters=64, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
-        print 'conv size', conv.get_shape().as_list()
-        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[2, 2, 2], strides=2)
-        print 'pool size', pool.get_shape().as_list()
+        print conv
+        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[1, 2, 2], strides=[1, 2, 2])
+        print pool
         conv2 = tf.layers.conv3d(inputs=pool, filters=32, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
-        print 'conv size', conv2.get_shape().as_list()
-        pool2 = tf.layers.max_pooling3d(inputs=conv2, pool_size=[2, 2, 2], strides=5)
-        print 'pool size', pool2.get_shape().as_list()
+        print conv2
+        pool2 = tf.layers.max_pooling3d(inputs=conv2, pool_size=[1, 2, 2], strides=[1, 5, 5])
+        print pool2
         flattened = tf.reshape(pool2, [-1, 10, 1 * 30 * 32])
-        print 'flattened size', flattened.get_shape().as_list()
+        print flattened
         return flattened
 
 
@@ -105,9 +106,8 @@ class CNN_RNN(RNNModel):
         """
         x = tf.cast(self.add_embedding(), tf.float32)
 
-        print 'original x shape', x.get_shape().as_list()
+        print x
         x = self.convolve(x)
-        print 'new x shape', x.get_shape().as_list()
       
         cell = GRUCell(1 * 30 * 32, self.config.hidden_size)
 
@@ -127,8 +127,8 @@ class CNN_RNN(RNNModel):
                 preds.append(y_t)
 
         preds = tf.stack(preds, 1) # converts from list to tensor
+        print preds
 
-        assert preds.get_shape().as_list() == [None, self.config.max_sentence_length, self.config.n_classes], 'predictions are not of the right shape. Expected {}, got {}'.format([None, self.max_length, self.config.n_classes], preds.get_shape().as_list())
         return preds
 
 
@@ -168,8 +168,8 @@ class CNN_RNN(RNNModel):
             for i in range(0, len(sentence)):
                 label = labels[i]
                 word = sentence[i]
-                sent_list.append(self.config.embedding_dict[word])
-                label_list.append(self.config.embedding_dict[label])
+                sent_list.append(self.config.embedding_dict[word]) # to lookup embedding (contains values for scrambled words)
+                label_list.append(self.config.word_to_id[label]) # for comparisons to predictions (contains only correctly spelled words)
                 
             assert len(sent_list) == len(label_list)
             if len(sent_list) > 0: # don't want any data to be [], []
@@ -310,37 +310,6 @@ def evaluate(args):
                 utils.save_results(f, output)
 
 
-def shell(args):
-    config = Config(args.model_path)
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
-    config.word_to_id = word_to_id
-    config.id_to_word = id_to_word
-
-    with tf.Graph().as_default():
-        logger.info('Building model...',)
-        start = time.time()
-        model = CNN_RNN(config, embeddings)
-        logger.info('took %.2f seconds', time.time() - start)
-
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
-
-        with tf.Session() as session:
-            session.run(init)
-            saver.restore(session, model.config.model_output)
-
-            print("""Welcome! You can use this shell to explore the behavior of your model.""")
-            while True:
-                try:
-                    sentence = raw_input('input> ')
-                    tokens = sentence.strip().split(" ")
-                    for sentence, _, predictions in model.output(session, [(tokens, ['O'] * len(tokens))]):
-                        print sentence, predictions
-                except EOFError:
-                    print('Closing session.')
-                    break
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trains and tests RNN model')
     subparsers = parser.add_subparsers()
@@ -357,11 +326,6 @@ if __name__ == '__main__':
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
-
-    command_parser = subparsers.add_parser('shell', help='')
-    command_parser.add_argument('-m', '--model-path', help='Training data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
-    command_parser.set_defaults(func=shell)
 
     ARGS = parser.parse_args()
     if ARGS.func is None:
