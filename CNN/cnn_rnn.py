@@ -187,7 +187,7 @@ class CNN_RNN(RNNModel):
         for i in range(0, len(preds)):
             for j in range(0, len(preds[0])):
                 if masks[i][j]:
-                    if inputs[i][j] == preds[i][j]:
+                    if self.config.id_to_word[inputs[i][j]] == self.config.reverse_embedding_lookup[preds[i][j]]:
                         correct += 1
                     total += 1
                 else:

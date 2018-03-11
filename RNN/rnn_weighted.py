@@ -206,7 +206,7 @@ class RNNModel(UpdatedModel):
 
 
 def lookup_words(predictions, originals, id_to_word):
-    """ sentence_preds = list()
+    sentence_preds = list()
     for pred in predictions:
         sentence = list()
         for word in pred:
@@ -220,8 +220,7 @@ def lookup_words(predictions, originals, id_to_word):
             sentence.append(id_to_word[word])
         sentence_in.append(sentence)
 
-    return sentence_preds, sentence_in"""
-    return predictions, originals
+    return sentence_preds, sentence_in
 
 
 def train(args):
@@ -287,6 +286,38 @@ def evaluate(args):
                 utils.save_results(f, output)
 
 
+def continue_train(args):
+    config = Config(args)
+
+    train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
+
+    config.id_to_word = id_to_word
+    config.embedding_lookup = embedding_lookup
+    
+    with tf.Graph().as_default():
+        logger.info('Building model...',)
+        start = time.time()
+        model = RNNModel(config, embeddings)
+
+        logger.info('took %.2f seconds', time.time() - start)
+
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
+
+        with tf.Session() as session:
+            session.run(init)
+            saver.restore(session, model.config.model_path)
+
+            model.fit(session, saver, train, test)
+
+            sentences, masks, predictions = model.output(session, train)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
+            output = zip(originals, masks, predictions)
+
+            with open('results_3_11.txt', 'w') as f:
+                utils.save_results(f, output)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Trains and tests RNN model')
     subparsers = parser.add_subparsers()
@@ -303,6 +334,12 @@ if __name__ == '__main__':
     command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
+
+    command_parser = subparsers.add_parser('continue_train', help='')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test', help='Training data')
+    command_parser.add_argument('-m', '--model-path', help='Training data')
+    command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
+    command_parser.set_defaults(func=continue_train)
 
     ARGS = parser.parse_args()
     if ARGS.func is None:
