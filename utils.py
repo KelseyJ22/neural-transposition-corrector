@@ -29,10 +29,10 @@ def create_weighted_embedding(word):
 	            new_vec[ind] = 0.5
 	        elif i-2 >= 0:
 	            ind = characters.find(word[i-2])
-	            new_vec[ind] = 0.25
+	            new_vec[ind] = 0.06
 	        elif i+2 < len(word):
 	            ind = characters.find(word[i+2])
-	            new_vec[ind] = 0.25
+	            new_vec[ind] = 0.06
 
 	        word_vec += new_vec
 	    else:

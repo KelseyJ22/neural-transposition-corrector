@@ -30,7 +30,7 @@ class Config:
     char_embed_dim = 300
     hidden_size = 600
     batch_size = 32
-    n_epochs = 10
+    n_epochs = 20
     max_grad_norm = 10.
     lr = 0.001
     id_to_word = dict()
@@ -86,15 +86,15 @@ class CNN_RNN(RNNModel):
     def convolve(self, inp):
         inp = tf.expand_dims(inp, -1)
         print inp
-        conv = tf.layers.conv3d(inputs=inp, filters=64, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
+        conv = tf.layers.conv3d(inputs=inp, filters=10, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
         print conv
-        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[1, 2, 2], strides=[1, 2, 2])
+        pool = tf.layers.max_pooling3d(inputs=conv, pool_size=[1, 2, 50], strides=[1, 1, 50])
         print pool
         conv2 = tf.layers.conv3d(inputs=pool, filters=32, kernel_size=[5, 5, 5], padding='same', activation=tf.nn.relu)
         print conv2
         pool2 = tf.layers.max_pooling3d(inputs=conv2, pool_size=[1, 2, 2], strides=[1, 5, 5])
         print pool2
-        flattened = tf.reshape(pool2, [-1, 10, 1 * 30 * 32])
+        flattened = tf.reshape(pool2, [-1, 10, 2 * 1 * 32])
         print flattened
         return flattened
 
@@ -109,7 +109,7 @@ class CNN_RNN(RNNModel):
         print x
         x = self.convolve(x)
       
-        cell = GRUCell(1 * 30 * 32, self.config.hidden_size)
+        cell = GRUCell(2 * 1 * 32, self.config.hidden_size)
 
         U = tf.get_variable('U', shape=[self.config.hidden_size, self.config.n_classes], initializer=tf.contrib.layers.xavier_initializer())
         b2 = tf.get_variable('b2', shape=[self.config.n_classes,], initializer = tf.constant_initializer(0))
@@ -127,7 +127,6 @@ class CNN_RNN(RNNModel):
                 preds.append(y_t)
 
         preds = tf.stack(preds, 1) # converts from list to tensor
-        print preds
 
         return preds
 
@@ -225,7 +224,7 @@ class CNN_RNN(RNNModel):
         self.build()
 
 
-def lookup_words(predictions, originals, id_to_word):
+def lookup_words(predictions, originals, id_to_word, reverse_embedding_lookup):
     sentence_preds = list()
     for pred in predictions:
         sentence = list()
@@ -237,7 +236,7 @@ def lookup_words(predictions, originals, id_to_word):
     for sent in originals:
         sentence = list()
         for word in sent:
-            sentence.append(id_to_word[word])
+            sentence.append(reverse_embedding_lookup[word])
         sentence_in.append(sentence)
 
     return sentence_preds, sentence_in
@@ -250,8 +249,9 @@ def train(args):
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
     config.embedding_dict = embedding_dict
+    reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
+
     config.expanded_vocab_size = len(embeddings)
-    print 'embedding size', embeddings[0].shape
 
     utils.save(config.output_path, word_to_id, id_to_word)
 
@@ -274,7 +274,7 @@ def train(args):
             model.fit(session, saver, train, test)
             
             sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
             output = zip(originals, masks, predictions)
 
             with open('results.txt', 'w') as f:
@@ -284,9 +284,13 @@ def train(args):
 def evaluate(args):
     config = Config(args)
 
-    train, test, word_to_id, id_to_word, embeddings = utils.load_from_file()
+    train, test, word_to_id, id_to_word, embedding_dict, embeddings = utils.load_from_file()
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
+    config.embedding_dict = embedding_dict
+    config.expanded_vocab_size = len(embeddings)
+    reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
+
 
     with tf.Graph().as_default():
         logger.info('Building model...',)
@@ -303,11 +307,47 @@ def evaluate(args):
             saver.restore(session, model.config.model_path)
 
             sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
+            output = zip(originals, masks, predictions)
+            #output = zip(sentences, masks, predictions)
+
+            with open('eval_results_3_10.txt', 'w') as f:
+                utils.save_results(f, output)
+
+
+def continue_train(args):
+    config = Config(args)
+
+    train, test, word_to_id, id_to_word, embedding_dict, embeddings = utils.load_from_file()
+    config.word_to_id = word_to_id
+    config.id_to_word = id_to_word
+    config.embedding_dict = embedding_dict
+    config.expanded_vocab_size = len(embeddings)
+    reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
+
+    with tf.Graph().as_default():
+        logger.info('Building model...',)
+        start = time.time()
+        model = CNN_RNN(config, embeddings)
+
+        logger.info('took %.2f seconds', time.time() - start)
+
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
+
+        with tf.Session() as session:
+            session.run(init)
+            saver.restore(session, model.config.model_path)
+
+            model.fit(session, saver, train, test)
+
+            sentences, masks, predictions = model.output(session, train)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
             output = zip(originals, masks, predictions)
 
-            with open('eval_results.txt', 'w') as f:
+            with open('results_3_10.txt', 'w') as f:
                 utils.save_results(f, output)
+
 
 
 if __name__ == '__main__':
@@ -317,15 +357,19 @@ if __name__ == '__main__':
     command_parser = subparsers.add_parser('train', help='')
     command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train', help='Training data')
     command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test', help='Testing data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.set_defaults(func=train)
 
     command_parser = subparsers.add_parser('evaluate', help='')
     command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test', help='Training data')
     command_parser.add_argument('-m', '--model-path', help='Training data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
+
+    command_parser = subparsers.add_parser('continue_train', help='')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test', help='Training data')
+    command_parser.add_argument('-m', '--model-path', help='Training data')
+    command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
+    command_parser.set_defaults(func=continue_train)
 
     ARGS = parser.parse_args()
     if ARGS.func is None:
