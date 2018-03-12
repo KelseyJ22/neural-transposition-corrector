@@ -187,7 +187,7 @@ class CNN_RNN(RNNModel):
         for i in range(0, len(preds)):
             for j in range(0, len(preds[0])):
                 if masks[i][j]:
-                    if self.config.id_to_word[inputs[i][j]] == self.config.reverse_embedding_lookup[preds[i][j]]:
+                    if self.config.id_to_word[preds[i][j]] == self.config.reverse_embedding_lookup[inputs[i][j]]:
                         correct += 1
                     total += 1
                 else:
@@ -249,7 +249,7 @@ def train(args):
     config.word_to_id = word_to_id
     config.id_to_word = id_to_word
     config.embedding_dict = embedding_dict
-    reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
+    config.reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
 
     config.expanded_vocab_size = len(embeddings)
 
@@ -274,7 +274,7 @@ def train(args):
             model.fit(session, saver, train, test)
             
             sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, config.reverse_embedding_lookup)
             output = zip(originals, masks, predictions)
 
             with open('results.txt', 'w') as f:
@@ -289,7 +289,7 @@ def evaluate(args):
     config.id_to_word = id_to_word
     config.embedding_dict = embedding_dict
     config.expanded_vocab_size = len(embeddings)
-    reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
+    config.reverse_embedding_lookup = {v: k for k, v in embedding_dict.iteritems()}
 
 
     with tf.Graph().as_default():
@@ -307,7 +307,7 @@ def evaluate(args):
             saver.restore(session, model.config.model_path)
 
             sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, config.reverse_embedding_lookup)
             output = zip(originals, masks, predictions)
             #output = zip(sentences, masks, predictions)
 
@@ -342,7 +342,7 @@ def continue_train(args):
             model.fit(session, saver, train, test)
 
             sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
+            originals, predictions = lookup_words(predictions, sentences, id_to_word, config.reverse_embedding_lookup)
             output = zip(originals, masks, predictions)
 
             with open('results_3_10.txt', 'w') as f:

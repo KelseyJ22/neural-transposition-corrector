@@ -86,9 +86,9 @@ def load_word_lookup_all(train, test, frequencies):
 
 train, test, frequencies = utils.load_data('Data/movie_lines.txt')
 
-embedding_lookup, reverse_embedding_lookup, embeddings = load_word_lookup_all(train, test, frequencies)
+#embedding_lookup, reverse_embedding_lookup, embeddings = load_word_lookup_all(train, test, frequencies)
 
-word_to_id, id_to_word, _ = load_word_lookup(frequencies)
+word_to_id, id_to_word, embeddings = load_word_lookup(frequencies)
 
 test_file = 'Data/test_all'
 test_file_obj = open(test_file, 'wb')
@@ -110,7 +110,7 @@ id2word_file_obj = open(id2word_file, 'wb')
 pickle.dump(word_to_id, id2word_file_obj)
 id2word_file_obj.close()
 
-embedding_lookup_file = 'Data/embedding_lookup_all'
+"""embedding_lookup_file = 'Data/embedding_lookup_all'
 embedding_lookup_file_obj = open(embedding_lookup_file, 'wb')
 pickle.dump(word_to_id, embedding_lookup_file_obj)
 embedding_lookup_file_obj.close()
@@ -118,7 +118,7 @@ embedding_lookup_file_obj.close()
 reverse_embedding_lookup_file = 'Data/reverse_embedding_lookup_all'
 reverse_embedding_lookup_file_obj = open(reverse_embedding_lookup_file, 'wb')
 pickle.dump(word_to_id, reverse_embedding_lookup_file_obj)
-reverse_embedding_lookup_file_obj.close()
+reverse_embedding_lookup_file_obj.close()"""
 
 embed_file = 'Data/embeddings_all'
 embed_file_obj = open(embed_file, 'wb')
