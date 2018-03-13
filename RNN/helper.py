@@ -8,6 +8,7 @@ import pickle
 pad = '0'
 max_length = 10
 unknown = '<UNK>'
+characters = 'abcdefghijklmnopqrstuvwxyz'
 
 def create_weighted_embedding(word):
 	max_word_len = 8
@@ -88,8 +89,12 @@ def shuffle_string(string):
 
 
 def add_error(word):
-	inner_chars = word[1:-1]
-	new_word = word[0] + shuffle_string(inner_chars) + word[-1]
+	#inner_chars = word[1:-1]
+	#new_word = word[0] + shuffle_string(inner_chars) + word[-1]
+	new_word = shuffle_string(word)
+	new_char = random.randint(0, 26-1)
+	loc = random.randint(0, len(word))
+	new_word = new_word[0:loc-1] + characters[new_char] + new_word[loc:]
 	return new_word
 
 
@@ -162,7 +167,7 @@ def generate_errors(data, frequencies):
 					if is_transposable(word):
 						gen_error = 0 #random.randint(0, 3)
 						if gen_error == 0:
-							new_sentence.append(add_local_error(word))
+							new_sentence.append(add_error(word))
 						else:
 							new_sentence.append(word)
 					else:
