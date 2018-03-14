@@ -92,9 +92,9 @@ def add_error(word):
 	#inner_chars = word[1:-1]
 	#new_word = word[0] + shuffle_string(inner_chars) + word[-1]
 	new_word = shuffle_string(word)
-	new_char = random.randint(0, 26-1)
-	loc = random.randint(0, len(word))
-	new_word = new_word[0:loc-1] + characters[new_char] + new_word[loc:]
+	#new_char = random.randint(0, 26-1)
+	#loc = random.randint(0, len(word))
+	#new_word = new_word[0:loc-1] + characters[new_char] + new_word[loc:]
 	return new_word
 
 
@@ -156,7 +156,10 @@ def clean(word):
 
 def generate_errors(data, frequencies):
 	errored = list()
+	i = 0
 	for sentence in data:
+		if i % 1000 == 0:
+			print i
 		cleaned_sentence = list()
 		new_sentence = list()
 		for word in sentence:
@@ -165,7 +168,7 @@ def generate_errors(data, frequencies):
 				if word in frequencies and frequencies[word] > 80:
 					cleaned_sentence.append(word)
 					if is_transposable(word):
-						gen_error = 0 #random.randint(0, 3)
+						gen_error = random.randint(0, 3)
 						if gen_error == 0:
 							new_sentence.append(add_error(word))
 						else:
@@ -175,6 +178,7 @@ def generate_errors(data, frequencies):
 				else:
 					cleaned_sentence.append(unknown)
 					new_sentence.append(unknown)
+		i += 1
 
 		errored.append((new_sentence[:10], cleaned_sentence[:10])) # input, output pair
 	return errored

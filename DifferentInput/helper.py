@@ -89,12 +89,9 @@ def shuffle_string(string):
 
 
 def add_error(word):
-	#inner_chars = word[1:-1]
-	#new_word = word[0] + shuffle_string(inner_chars) + word[-1]
-	new_word = shuffle_string(word)
-	new_char = random.randint(0, 26-1)
-	loc = random.randint(0, len(word))
-	new_word = new_word[0:loc-1] + characters[new_char] + new_word[loc:]
+	inner_chars = word[1:-1]
+	new_word = word[0] + shuffle_string(inner_chars) + word[-1]
+	
 	return new_word
 
 
@@ -165,11 +162,11 @@ def generate_errors(data, frequencies):
 				if word in frequencies and frequencies[word] > 80:
 					cleaned_sentence.append(word)
 					if is_transposable(word):
-						gen_error = 0 #random.randint(0, 3)
-						if gen_error == 0:
-							new_sentence.append(add_error(word))
+						if random.randint(0, 3) == 0:						
+							new_word = shuffle_string(word)
 						else:
 							new_sentence.append(word)
+
 					else:
 						new_sentence.append(word)
 				else:

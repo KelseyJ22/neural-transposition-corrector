@@ -28,7 +28,7 @@ class Config:
     charset_size = len(characters)
     hidden_size = 800
     batch_size = 32
-    n_epochs = 50
+    n_epochs = 40
     max_grad_norm = 10.
     lr = 0.001
     max_word_len = 8
@@ -225,7 +225,7 @@ def lookup_words(predictions, originals, id_to_word):
 
 def train(args):
     config = Config(args)
-    train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
+    train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file('all')
 
     config.id_to_word = id_to_word
     config.embedding_lookup = embedding_lookup
@@ -248,43 +248,49 @@ def train(args):
         with tf.Session() as session:
             session.run(init)
             model.fit(session, saver, train, test)
-            
-            sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word)
-            output = zip(originals, masks, predictions)
 
-            with open('results_3_11.txt', 'w') as f:
-                utils.save_results(f, output)
+            different_evals = ['local', 'internal', 'shuffle', 'replace']
+
+            for fname in different_evals:
+                test = utils.load_test(fname)
+                sentences, masks, predictions = model.output(session, test)
+                #originals, predictions = lookup_words(predictions, sentences, id_to_word)
+                #output = zip(originals, masks, predictions)
+
+                #with open('results' + fname + '.txt', 'w') as f:
+                #    utils.save_results(f, output)
 
 
 def evaluate(args):
     config = Config(args)
+    different_evals = ['local', 'internal', 'shuffle', 'replace']
+    for file in different_evals:
+        _, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file(file)
 
-    train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file()
+        config.id_to_word = id_to_word
+        config.embedding_lookup = embedding_lookup
 
-    config.id_to_word = id_to_word
-    config.embedding_lookup = embedding_lookup
+        with tf.Graph().as_default():
+            logger.info('Building model...',)
+            start = time.time()
+            model = RNNModel(config, embeddings)
 
-    with tf.Graph().as_default():
-        logger.info('Building model...',)
-        start = time.time()
-        model = RNNModel(config, embeddings)
+            logger.info('took %.2f seconds', time.time() - start)
 
-        logger.info('took %.2f seconds', time.time() - start)
+            init = tf.global_variables_initializer()
+            saver = tf.train.Saver()
 
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
+            with tf.Session() as session:
+                session.run(init)
+                saver.restore(session, model.config.model_path)
 
-        with tf.Session() as session:
-            session.run(init)
-            saver.restore(session, model.config.model_path)
+                for i in range(0, 4):
+                    sentences, masks, predictions = model.output(session, test)
+                    originals, predictions = lookup_words(predictions, sentences, id_to_word)
+                    output = zip(originals, masks, predictions)
 
-            sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word)
-            output = zip(originals, masks, predictions)
-
-            with open('eval_results.txt', 'w') as f:
-                utils.save_results(f, output)
+                with open('eval_results_' + file + '.txt', 'w') as f:
+                    utils.save_results(f, output)
 
 
 def continue_train(args):
@@ -315,7 +321,7 @@ def continue_train(args):
             originals, predictions = lookup_words(predictions, sentences, id_to_word, reverse_embedding_lookup)
             output = zip(originals, masks, predictions)
 
-            with open('results_3_11.txt', 'w') as f:
+            with open('results.txt', 'w') as f:
                 utils.save_results(f, output)
 
 
@@ -324,20 +330,18 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
 
     command_parser = subparsers.add_parser('train', help='')
-    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='data/train_weighted_internal', help='Training data')
-    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='data/test_weighted_internal', help='Testing data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
+    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='data/train_weighted_all', help='Training data')
+    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='data/test_weighted_all', help='Testing data')
     command_parser.set_defaults(func=train)
 
     command_parser = subparsers.add_parser('evaluate', help='')
-    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='data/test_weighted_internal', help='Training data')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='data/test_weighted_all', help='Training data')
     command_parser.add_argument('-m', '--model-path', help='Training data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
 
     command_parser = subparsers.add_parser('continue_train', help='')
-    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='data/test_weighted_internal', help='Training data')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='data/test_weighted_all', help='Training data')
     command_parser.add_argument('-m', '--model-path', help='Training data')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=continue_train)

@@ -113,34 +113,43 @@ def parse_str(line):
 	return (inp, outp)
 
 
-def load_from_file():
-	test_file = 'data/test_weighted_local'
+def load_test(fname):
+	test_file = 'data/train_weighted_' + fname
+	test_file_obj = open(test_file, 'rb')
+	test = pickle.load(test_file_obj)
+	test_file_obj.close()
+	print 'loaded test data from', fname
+	return test
+
+
+def load_from_file(fname):
+	test_file = 'data/test_weighted_' + fname
 	test_file_obj = open(test_file, 'rb')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
 	print 'loaded test data'
 
-	train_file = 'data/train_weighted_local'
+	train_file = 'data/train_weighted_' + fname
 	train_file_obj = open(train_file, 'rb')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 	print 'loaded train data'
 
 
-	id2word_file = 'data/id2word_weighted_local'
+	id2word_file = 'data/id2word_weighted_' + fname
 	id2word_file_obj = open(id2word_file, 'rb')
 	id_to_word = pickle.load(id2word_file_obj)
 	id2word_file_obj.close()
 	print 'loaded id_to_word lookup'
 
-	embedding_lookup_file = 'data/embedding_lookup_weighted_local'
+	embedding_lookup_file = 'data/embedding_lookup_weighted_' + fname
 	embedding_lookup_file_obj = open(embedding_lookup_file, 'rb')
 	embedding_lookup = pickle.load(embedding_lookup_file_obj)
 	embedding_lookup_file_obj.close()
 	print 'loaded embedding lookup counts'
 
 
-	embed_file = 'data/embeddings_weighted_local'
+	embed_file = 'data/embeddings_weighted_' + fname
 	embed_file_obj = open(embed_file, 'rb')
 	embeddings = pickle.load(embed_file_obj)
 	embed_file_obj.close()
