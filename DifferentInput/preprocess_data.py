@@ -86,31 +86,31 @@ def gen_word_lookup_weighted(train, test, frequencies):
 
 train, test, frequencies = helper.load_data('data/movie_lines.txt')
 
-embedding_lookup, reverse_embedding_lookup, embeddings = gen_word_lookup_weighted(train, test, frequencies)
+#embedding_lookup, reverse_embedding_lookup, embeddings = gen_word_lookup_weighted(train, test, frequencies)
 
-word_to_id, id_to_word, _ = gen_word_lookup_simple(frequencies)
+word_to_id, id_to_word, embeddings = gen_word_lookup_simple(frequencies)
 
-test_file = 'data/test_weighted_shuffle'
+test_file = 'data/test_semichar_internal'
 test_file_obj = open(test_file, 'wb')
 pickle.dump(test, test_file_obj)
 test_file_obj.close()
 
-train_file = 'data/train_weighted_shuffle'
+train_file = 'data/train_semichar_internal'
 train_file_obj = open(train_file, 'wb')
 pickle.dump(train, train_file_obj)
 train_file_obj.close()
 
-word2id_file = 'data/word2id_weighted_shuffle'
+word2id_file = 'data/word2id_semichar_internal'
 word2id_file_obj = open(word2id_file, 'wb')
 pickle.dump(word_to_id, word2id_file_obj)
 word2id_file_obj.close()
 
-id2word_file = 'data/id2word_weighted_shuffle'
+id2word_file = 'data/id2word_semichar_internal'
 id2word_file_obj = open(id2word_file, 'wb')
 pickle.dump(word_to_id, id2word_file_obj)
 id2word_file_obj.close()
 
-embedding_lookup_file = 'data/embedding_lookup_weighted_shuffle'
+"""embedding_lookup_file = 'data/embedding_lookup_weighted_shuffle'
 embedding_lookup_file_obj = open(embedding_lookup_file, 'wb')
 pickle.dump(word_to_id, embedding_lookup_file_obj)
 embedding_lookup_file_obj.close()
@@ -118,9 +118,9 @@ embedding_lookup_file_obj.close()
 reverse_embedding_lookup_file = 'data/reverse_embedding_lookup_weighted_shuffle'
 reverse_embedding_lookup_file_obj = open(reverse_embedding_lookup_file, 'wb')
 pickle.dump(word_to_id, reverse_embedding_lookup_file_obj)
-reverse_embedding_lookup_file_obj.close()
+reverse_embedding_lookup_file_obj.close()"""
 
-embed_file = 'data/embeddings_weighted_shuffle'
+embed_file = 'data/embeddings_semichar_internal'
 embed_file_obj = open(embed_file, 'wb')
 pickle.dump(embeddings, embed_file_obj)
 embed_file_obj.close()

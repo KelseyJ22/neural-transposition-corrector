@@ -114,7 +114,7 @@ def parse_str(line):
 
 
 def load_test(fname):
-	test_file = 'data/train_weighted_' + fname
+	test_file = 'data/train_semichar_' + fname
 	test_file_obj = open(test_file, 'rb')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
@@ -159,25 +159,25 @@ def load_from_file(fname):
 
 
 def load_from_file_basic():
-	test_file = '../Data/test_all'
+	test_file = 'data/test_semichar_all'
 	test_file_obj = open(test_file, 'rb')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
 	print 'loaded test data'
 
-	train_file = '../Data/train_all'
+	train_file = 'data/train_semichar_all'
 	train_file_obj = open(train_file, 'rb')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 	print 'loaded train data'
 
-	word2id_file = '../Data/word2id_all'
+	word2id_file = 'data/word2id_semichar_all'
 	word2id_file_obj = open(word2id_file, 'rb')
 	word_to_id = pickle.load(word2id_file_obj)
 	word2id_file_obj.close()
 	print 'loaded word_to_id lookup'
 
-	id2word_file = '../Data/id2word_all'
+	id2word_file = 'data/id2word_semichar_all'
 	id2word_file_obj = open(id2word_file, 'rb')
 	id_to_word = pickle.load(id2word_file_obj)
 	id2word_file_obj.close()

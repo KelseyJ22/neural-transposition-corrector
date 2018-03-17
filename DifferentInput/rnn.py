@@ -143,20 +143,19 @@ class RNNModel(UpdatedModel):
         for sentence, labels in examples:
             sent_list = list()
             label_list = list()
-            assert len(sentence) == len(labels)
+            if len(sentence) == len(labels):
+                for i in range(0, len(sentence)):
+                    #word = sentence[i]
+                    label = labels[i]
+                    # with current configuration of embedding using label for both works
+                    # (will need to change if/when I try other embeddings)
+                    sent_list.append(self.config.word_to_id[label])
+                    label_list.append(self.config.word_to_id[label])
 
-            for i in range(0, len(sentence)):
-                #word = sentence[i]
-                label = labels[i]
-                # with current configuration of embedding using label for both works
-                # (will need to change if/when I try other embeddings)
-                sent_list.append(self.config.word_to_id[label])
-                label_list.append(self.config.word_to_id[label])
-
-            assert len(sent_list) == len(label_list)
-            if len(sent_list) > 0: # don't want any data to be [], []
-                x.append(np.asarray(sent_list))
-                y.append(np.asarray(label_list))
+                assert len(sent_list) == len(label_list)
+                if len(sent_list) > 0: # don't want any data to be [], []
+                    x.append(np.asarray(sent_list))
+                    y.append(np.asarray(label_list))
 
         return (utils.pad_sequences(np.asarray(x), np.asarray(y)))
 
@@ -250,13 +249,18 @@ def train(args):
         with tf.Session() as session:
             session.run(init)
             model.fit(session, saver, train, test)
-            
-            sentences, masks, predictions = model.output(session, train)
-            originals, predictions = lookup_words(predictions, sentences, id_to_word)
-            output = zip(originals, masks, predictions)
 
-            with open('results.txt', 'w') as f:
-                utils.save_results(f, output)
+            different_evals = ['random']
+
+            for fname in different_evals:
+                test = utils.load_test(fname)
+                sentences, masks, predictions = model.output(session, test)
+
+            #originals, predictions = lookup_words(predictions, sentences, id_to_word)
+            #output = zip(originals, masks, predictions)
+
+            #with open('results.txt', 'w') as f:
+            #    utils.save_results(f, output)
 
 
 def evaluate(args):
@@ -294,15 +298,13 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers()
 
     command_parser = subparsers.add_parser('train', help='')
-    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='../Data/train_all', help='Training data')
-    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='../Data/test_all', help='Testing data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
+    command_parser.add_argument('-dt', '--data-train', type=argparse.FileType('r'), default='data/train_semichar_all', help='Training data')
+    command_parser.add_argument('-dd', '--data-dev', type=argparse.FileType('r'), default='data/test_semichar_all', help='Testing data')
     command_parser.set_defaults(func=train)
 
     command_parser = subparsers.add_parser('evaluate', help='')
-    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='../Data/test_all', help='Training data')
+    command_parser.add_argument('-d', '--data', type=argparse.FileType('r'), default='data/test_semichar_all', help='Training data')
     command_parser.add_argument('-m', '--model-path', help='Training data')
-    command_parser.add_argument('-v', '--vocab', type=argparse.FileType('r'), default='../Data/vocab.txt', help='Path to vocabulary file')
     command_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Training data')
     command_parser.set_defaults(func=evaluate)
 
