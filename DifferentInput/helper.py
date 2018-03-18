@@ -155,36 +155,33 @@ def generate_errors(data, frequencies):
 	for sentence in data:
 		cleaned_sentence = list()
 		new_sentence = list()
+		#could_scramble = list()
+		#i = 0
 		for word in sentence:
 			word = clean(word)
 			if len(word) > 0:
 				if word in frequencies and frequencies[word] > 80:
 					cleaned_sentence.append(word)
 					if is_transposable(word):
-						"""if random.randint(0, 20) == 0:						
-							new_word = shuffle_string(word)
-						elif random.randint(0, 20) == 0:						
-							new_word = add_error(word)
-						elif random.randint(0, 20) == 0:						
-							new_word = add_local_error(word)
-						elif random.randint(0, 20) == 0:						
-							new_word = shuffle_string(word)
-							new_char = random.randint(0, len(characters)-1)
-							new_ind = random.randint(0, len(new_word))
-							w = new_word[:new_ind+1] + characters[new_char] + new_word[new_char+2:]
-							new_sentence.append(w)"""
-						if random.randint(0, 3) == 0:
-							new_word = add_error(word)
-							new_sentence.append(new_word)
-						else:
-							new_sentence.append(word)
-
+						#could_scramble.append((word, i))
+						new_word = shuffle_string(word)
+						new_char = random.randint(0, len(characters)-1)
+						new_ind = random.randint(0, len(word))
+						w = new_word[:new_ind+1] + characters[new_ind] + new_word[new_ind+1:]
+						new_sentence.append(shuffle_string(w))
 					else:
-						new_sentence.append(word)
+						new_sentence.append(shuffle_string(word))
 				else:
 					cleaned_sentence.append(unknown)
 					new_sentence.append(unknown)
+				#i += 1
 
+		"""if len(could_scramble) > 0:
+			selection = random.randint(0, len(could_scramble)-1)
+			selected = could_scramble[selection]
+			new_sentence[selected[1]] = add_error(selected[0])
+			cleaned_sentence[selected[1]] = selected[0]"""
+		print new_sentence, cleaned_sentence
 		errored.append((new_sentence[:10], cleaned_sentence[:10])) # input, output pair
 	return errored
 

@@ -167,16 +167,18 @@ class RNNModel(UpdatedModel):
         complete = 0
         trivial = 0
         for i in range(0, len(preds)):
+            print inputs[i], preds[i]
             for j in range(0, len(preds[0])):
                 if masks[i][j]:
-                    if inputs[i][j] == preds[i][j]:
-                        correct += 1
-                    total += 1
+                    if inputs[i][j] != self.config.word_to_id['<UNK>']:
+                        if inputs[i][j] == preds[i][j]:
+                            correct += 1
+                        total += 1
                 else:
                     trivial += 1
                 complete += 1
 
-        print 'correct', correct, 'out of', total, 'or', correct + trivial, 'out of', complete
+        print 'correct', correct, 'out of', total, 'or', correct + trivial, 'out of', complete, float(correct)/float(total), float(correct + trivial)/float(complete)
 
         return inputs, masks, preds
 
@@ -250,11 +252,7 @@ def train(args):
             session.run(init)
             model.fit(session, saver, train, test)
 
-            different_evals = ['random']
-
-            for fname in different_evals:
-                test = utils.load_test(fname)
-                sentences, masks, predictions = model.output(session, test)
+            sentences, masks, predictions = model.output(session, train)
 
             #originals, predictions = lookup_words(predictions, sentences, id_to_word)
             #output = zip(originals, masks, predictions)

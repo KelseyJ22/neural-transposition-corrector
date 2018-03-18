@@ -82,6 +82,7 @@ class UpdatedModel(Model):
         preds = list()
         batched_in = list()
         batched_mask = list()
+        batched_labels = list()
         inputs = self.preprocess_sequence_data(inputs)
 
         batches = utils.get_batches(inputs, self.config.batch_size)
@@ -89,10 +90,11 @@ class UpdatedModel(Model):
         for batch in tqdm(batches):
             batched_in += list(batch[0])
             batched_mask += list(batch[2])
+            batched_labels += list(batch[1])
             preds_ = self.predict_on_batch(sess, batch[0], batch[2]) # only pass inputs and masks
             preds += list(preds_)
 
-        return self.consolidate_predictions(batched_in, batched_mask, preds)
+        return self.consolidate_predictions(batched_labels, batched_mask, preds)
 
 
     def fit(self, sess, saver, train_examples_raw, dev_set_raw):

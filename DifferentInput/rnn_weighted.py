@@ -35,6 +35,8 @@ class Config:
     id_to_word = dict()
     embedding_lookup = dict()
     word_vec_size = charset_size * max_word_len
+    reverse_lookup = dict()
+    word_to_id = dict()
 
     def __init__(self, args):
         if 'output_path' in args:
@@ -143,18 +145,18 @@ class RNNModel(UpdatedModel):
         for sentence, labels in examples:
             sent_list = list()
             label_list = list()
-            assert len(sentence) == len(labels)
-
-            for i in range(0, len(sentence)):
-                word = sentence[i]
-                label = labels[i]
-                sent_list.append(self.config.embedding_lookup[label])
-                label_list.append(self.config.embedding_lookup[label])
-
-            assert len(sent_list) == len(label_list)
-            if len(sent_list) > 0: # don't want any data to be [], []
-                x.append(np.asarray(sent_list))
-                y.append(np.asarray(label_list))
+            if len(sentence) == len(labels):
+                for i in range(0, len(sentence)):
+                    word = sentence[i]
+                    label = labels[i]
+                    sent_list.append(self.config.embedding_lookup[word])
+                    label_list.append(self.config.word_to_id[label])
+                #print 'INPUT:', sentence, sent_list
+                #print 'TARGET:', labels, label_list
+                assert len(sent_list) == len(label_list)
+                if len(sent_list) > 0: # don't want any data to be [], []
+                    x.append(np.asarray(sent_list))
+                    y.append(np.asarray(label_list))
 
         return (utils.pad_sequences(np.asarray(x), np.asarray(y)))
 
@@ -175,7 +177,7 @@ class RNNModel(UpdatedModel):
                     trivial += 1
                 complete += 1
 
-        print 'correct', correct, 'out of', total, 'or', correct + trivial, 'out of', complete
+        print 'correct', correct, 'out of', total, 'or', correct + trivial, 'out of', complete, float(correct)/float(total), float(correct + trivial)/float(complete)
 
         return inputs, masks, preds
 
@@ -225,10 +227,12 @@ def lookup_words(predictions, originals, id_to_word):
 
 def train(args):
     config = Config(args)
-    train, test, id_to_word, embedding_lookup, embeddings = utils.load_from_file('all')
+    train, test, id_to_word, word_to_id, embedding_lookup, reverse_lookup, embeddings = utils.load_from_file('shuffle')
 
     config.id_to_word = id_to_word
+    config.word_to_id = word_to_id
     config.embedding_lookup = embedding_lookup
+    config.reverse_lookup = reverse_lookup
     utils.save(config.output_path, embedding_lookup, id_to_word)
 
     handler = logging.FileHandler(config.log_output)
@@ -249,11 +253,11 @@ def train(args):
             session.run(init)
             model.fit(session, saver, train, test)
 
-            different_evals = ['local', 'internal', 'shuffle', 'replace']
+            #different_evals = ['local', 'internal', 'shuffle', 'replace']
 
-            for fname in different_evals:
-                test = utils.load_test(fname)
-                sentences, masks, predictions = model.output(session, test)
+            #for fname in different_evals:
+            #    test = utils.load_test(fname)
+            sentences, masks, predictions = model.output(session, train)
                 #originals, predictions = lookup_words(predictions, sentences, id_to_word)
                 #output = zip(originals, masks, predictions)
 

@@ -123,61 +123,73 @@ def load_test(fname):
 
 
 def load_from_file(fname):
-	test_file = 'data/test_weighted_' + fname
+	test_file = 'data/test_weighted_no_context_' + fname
 	test_file_obj = open(test_file, 'rb')
 	test = pickle.load(test_file_obj)
 	test_file_obj.close()
 	print 'loaded test data'
 
-	train_file = 'data/train_weighted_' + fname
+	train_file = 'data/train_weighted_no_context_' + fname
 	train_file_obj = open(train_file, 'rb')
 	train = pickle.load(train_file_obj)
 	train_file_obj.close()
 	print 'loaded train data'
 
 
-	id2word_file = 'data/id2word_weighted_' + fname
+	id2word_file = 'data/id2word_weighted_no_context_' + fname
 	id2word_file_obj = open(id2word_file, 'rb')
 	id_to_word = pickle.load(id2word_file_obj)
 	id2word_file_obj.close()
 	print 'loaded id_to_word lookup'
 
-	embedding_lookup_file = 'data/embedding_lookup_weighted_' + fname
-	embedding_lookup_file_obj = open(embedding_lookup_file, 'rb')
-	embedding_lookup = pickle.load(embedding_lookup_file_obj)
-	embedding_lookup_file_obj.close()
-	print 'loaded embedding lookup counts'
-
-
-	embed_file = 'data/embeddings_weighted_' + fname
-	embed_file_obj = open(embed_file, 'rb')
-	embeddings = pickle.load(embed_file_obj)
-	embed_file_obj.close()
-	print 'loaded embeddings'
-
-	return train, test, id_to_word, embedding_lookup, embeddings
-
-
-def load_from_file_basic():
-	test_file = 'data/test_semichar_all'
-	test_file_obj = open(test_file, 'rb')
-	test = pickle.load(test_file_obj)
-	test_file_obj.close()
-	print 'loaded test data'
-
-	train_file = 'data/train_semichar_all'
-	train_file_obj = open(train_file, 'rb')
-	train = pickle.load(train_file_obj)
-	train_file_obj.close()
-	print 'loaded train data'
-
-	word2id_file = 'data/word2id_semichar_all'
+	word2id_file = 'data/word2id_weighted_no_context_' + fname
 	word2id_file_obj = open(word2id_file, 'rb')
 	word_to_id = pickle.load(word2id_file_obj)
 	word2id_file_obj.close()
 	print 'loaded word_to_id lookup'
 
-	id2word_file = 'data/id2word_semichar_all'
+	embedding_lookup_file = 'data/embedding_lookup_weighted_no_context_' + fname
+	embedding_lookup_file_obj = open(embedding_lookup_file, 'rb')
+	embedding_lookup = pickle.load(embedding_lookup_file_obj)
+	embedding_lookup_file_obj.close()
+	print 'loaded embedding lookup'
+
+	rev_embedding_lookup_file = 'data/reverse_embedding_lookup_weighted_no_context_' + fname
+	rev_embedding_lookup_file_obj = open(rev_embedding_lookup_file, 'rb')
+	rev_embedding_lookup = pickle.load(rev_embedding_lookup_file_obj)
+	rev_embedding_lookup_file_obj.close()
+	print 'loaded rev embedding lookup'
+
+
+	embed_file = 'data/embeddings_weighted_no_context_' + fname
+	embed_file_obj = open(embed_file, 'rb')
+	embeddings = pickle.load(embed_file_obj)
+	embed_file_obj.close()
+	print 'loaded embeddings'
+
+	return train, test, id_to_word, word_to_id, embedding_lookup, rev_embedding_lookup, embeddings
+
+
+def load_from_file_basic():
+	test_file = 'data/test_semichar_no_context_shuffle'
+	test_file_obj = open(test_file, 'rb')
+	test = pickle.load(test_file_obj)
+	test_file_obj.close()
+	print 'loaded test data'
+
+	train_file = 'data/train_semichar_no_context_shuffle'
+	train_file_obj = open(train_file, 'rb')
+	train = pickle.load(train_file_obj)
+	train_file_obj.close()
+	print 'loaded train data'
+
+	word2id_file = 'data/word2id_semichar_no_context_shuffle'
+	word2id_file_obj = open(word2id_file, 'rb')
+	word_to_id = pickle.load(word2id_file_obj)
+	word2id_file_obj.close()
+	print 'loaded word_to_id lookup'
+
+	id2word_file = 'data/id2word_semichar_no_context_shuffle'
 	id2word_file_obj = open(id2word_file, 'rb')
 	id_to_word = pickle.load(id2word_file_obj)
 	id2word_file_obj.close()
