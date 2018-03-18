@@ -1,0 +1,37 @@
+RNN with same train, different eval
+
+loaded test data from local
+100%|███████████████████████████████████████████| 32/32 [00:05<00:00,  5.53it/s]
+correct 4637 out of 5069 or 9808 out of 10240
+loaded test data from internal
+100%|███████████████████████████████████████████| 32/32 [00:05<00:00,  5.55it/s]
+correct 3674 out of 4077 or 9837 out of 10240
+loaded test data from shuffle
+100%|███████████████████████████████████████████| 32/32 [00:05<00:00,  5.44it/s]
+correct 4311 out of 5053 or 9498 out of 10240
+loaded test data from random
+100%|███████████████████████████████████████████| 32/32 [00:05<00:00,  5.37it/s]
+correct 4273 out of 4839 or 9674 out of 10240
+
+
+no context internal
+correct 3174 out of 3867 or 9029 out of 10240 0.820791311094 0.88173828125
+
+no context local
+correct 4086 out of 4704 or 9127 out of 10240 0.86862244898 0.89130859375
+
+no context shuffle
+correct 3732 out of 4585 or 9013 out of 10240 0.813958560523 0.88017578125
+
+no context random
+correct 4329 out of 5213 or 8801 out of 10240 0.83042394015 0.85947265625
+
+
+no context internal weighted
+correct 4285 out of 5308 or 9217 out of 10240 0.8072720422 0.90009765625
+
+no context local weighted
+correct 4583 out of 5405 or 9418 out of 10240 0.847918593895 0.9197265625
+
+no context shuffle weighted
+correct 4075 out of 5331 or 8984 out of 10240 0.764396923654 0.87734375
